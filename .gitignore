@@ -1,0 +1,21 @@
+# Bog'liqliklar
+node_modules/
+
+# Maxfiy sozlamalar — HECH QACHON repoga qo'shilmaydi
+.env
+.env.*
+!.env.example
+
+# Lokal PostgreSQL ma'lumotlari (npm run db)
+backend/.pgdata/
+
+# Build va loglar
+frontend/dist/
+coverage/
+*.log
+.DS_Store
+Thumbs.db
+
+# Eski versiyadan qolgan lokal baza
+data/
+*.db
