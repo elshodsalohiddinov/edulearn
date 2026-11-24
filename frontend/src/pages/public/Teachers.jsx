@@ -2,7 +2,7 @@
 import { Link, useParams } from 'react-router';
 import { BookOpen, Users } from 'lucide-react';
 import CourseCard from '../../components/CourseCard';
-import { Avatar, EmptyState, ErrorState, PageLoader, SkeletonGrid } from '../../components/ui';
+import { Avatar, Breadcrumbs, EmptyState, ErrorState, PageLoader, SkeletonGrid } from '../../components/ui';
 import { publicApi } from '../../services/coursesApi';
 import { useFetch, useTitle } from '../../hooks/useFetch';
 import { fullName } from '../../utils/format';
@@ -12,7 +12,8 @@ export default function Teachers() {
   useTitle('O\'qituvchilar');
   const { data, loading, error, reload } = useFetch(() => publicApi.teachers(), []);
   return (
-    <div className="container-page pt-10">
+    <div className="container-page pt-8">
+      <Breadcrumbs items={[["Bosh sahifa", "/"], ["O'qituvchilar"]]} />
       <h1 className="text-3xl font-bold">O'qituvchilar</h1>
       <p className="mb-8 mt-1 text-muted">Platformadagi kurs mualliflari.</p>
       {loading && <SkeletonGrid className="h-40" />}
@@ -43,7 +44,8 @@ export function TeacherProfile() {
   if (error?.status === 404 || error?.status === 400) return <NotFound />;
   if (error) return <div className="container-page pt-10"><ErrorState error={error} onRetry={reload} /></div>;
   return (
-    <div className="container-page pt-10">
+    <div className="container-page pt-8">
+      <Breadcrumbs items={[["Bosh sahifa", "/"], ["O'qituvchilar", "/teachers"], [fullName(t)]]} />
       <section className="card flex flex-col items-center gap-6 p-6 text-center sm:flex-row sm:text-left">
         <Avatar user={t} size="size-24 text-3xl" />
         <div>

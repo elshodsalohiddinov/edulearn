@@ -1,4 +1,5 @@
 // Kichik qayta ishlatiladigan UI bo'laklari: holatlar, badge, progress, avatar, sahifalash va h.k.
+import { Link } from 'react-router';
 import { AlertTriangle, ChevronLeft, ChevronRight, Inbox, Loader2, RotateCcw } from 'lucide-react';
 import { LEVELS, ROLES, STATUSES, cn, initials } from '../utils/format';
 
@@ -117,6 +118,22 @@ export function StatCard({ icon: Icon, label, value, tone = 'brand' }) {
         <p className="text-2xl font-bold text-ink tabular-nums">{value}</p>
       </div>
     </div>
+  );
+}
+
+// Breadcrumb: "Bosh sahifa / Kurslar / React asoslari" — foydalanuvchi qayerdaligini ko'rsatadi
+export function Breadcrumbs({ items }) {
+  return (
+    <nav aria-label="Breadcrumb" className="mb-4 text-sm text-muted">
+      <ol className="flex flex-wrap items-center gap-1.5">
+        {items.map(([label, to], i) => (
+          <li key={label} className="flex items-center gap-1.5">
+            {i > 0 && <ChevronRight className="size-3.5" aria-hidden="true" />}
+            {to ? <Link to={to} className="hover:text-brand-700">{label}</Link> : <span aria-current="page" className="font-medium text-ink">{label}</span>}
+          </li>
+        ))}
+      </ol>
+    </nav>
   );
 }
 

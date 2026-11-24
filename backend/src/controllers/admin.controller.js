@@ -13,7 +13,10 @@ async function stats(_req, res) {
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5, 1);
   sixMonthsAgo.setHours(0, 0, 0, 0);
 
-  const [byRole, byStatus, enrollments, lessons, unreadMessages, recentEnrollments, categories, topCourses] = await Promise.all([
+  const [
+    byRole, byStatus, enrollments, lessons, unreadMessages, recentEnrollments, categories, topCourses,
+    pendingRequests, recentUsers, recentCourses,
+  ] = await Promise.all([
     prisma.user.groupBy({ by: ['role'], _count: { _all: true } }),
     prisma.course.groupBy({ by: ['status'], _count: { _all: true } }),
     prisma.enrollment.count(),
@@ -27,6 +30,10 @@ async function stats(_req, res) {
       take: 5,
       select: { id: true, title: true, slug: true, _count: { select: { enrollments: true } } },
     }),
+    prisma.teacherRequest.count({ where: { status: 'PENDING' } }),
+    // "Umumiy ko'rinish" sahifasi uchun: so'nggi foydalanuvchilar va kurslar
+    prisma.user.findMany({ orderBy: { createdAt: 'desc' }, take: 5, select: PUBLIC_USER_SELECT }),
+    prisma.course.findMany({ orderBy: { createdAt: 'desc' }, take: 5, include: CARD_INCLUDE }),
   ]);
 
   const roleCount = Object.fromEntries(byRole.map((r) => [r.role, r._count._all]));
@@ -61,6 +68,9 @@ async function stats(_req, res) {
     enrollments,
     lessons,
     unreadMessages,
+    pendingRequests,
+    recentUsers,
+    recentCourses: recentCourses.map(toCard),
     enrollmentsByMonth: months.map(({ label, count }) => ({ month: label, count })),
     coursesByCategory: categories.map((c) => ({ name: c.name, count: c._count.courses })),
     topCourses: topCourses.map((c) => ({ id: c.id, title: c.title, slug: c.slug, students: c._count.enrollments })),

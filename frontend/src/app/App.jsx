@@ -14,7 +14,7 @@ import CourseDetail from '../pages/public/CourseDetail';
 import Teachers, { TeacherProfile } from '../pages/public/Teachers';
 import { About, Contact } from '../pages/public/Static';
 import NotFound from '../pages/public/NotFound';
-import { ForgotPassword, Login, Register } from '../pages/auth/AuthPages';
+import { Login, Register } from '../pages/auth/AuthPages';
 import { PageLoader } from '../components/ui';
 
 // Panellar alohida fayllarga bo'linadi (code splitting): mehmon admin panel kodini yuklamaydi
@@ -23,13 +23,17 @@ const ProfilePage = lazy(() => import('../pages/ProfilePage'));
 const StudentDashboard = named(() => import('../pages/student/StudentPages'), 'StudentDashboard');
 const StudentCourses = named(() => import('../pages/student/StudentPages'), 'StudentCourses');
 const MyCourses = named(() => import('../pages/student/StudentPages'), 'MyCourses');
+const StudentProgress = named(() => import('../pages/student/StudentPages'), 'StudentProgress');
 const Learn = lazy(() => import('../pages/student/Learn'));
 const TeacherDashboard = named(() => import('../pages/teacher/TeacherPages'), 'TeacherDashboard');
 const TeacherCourses = named(() => import('../pages/teacher/TeacherPages'), 'TeacherCourses');
 const CourseForm = named(() => import('../pages/teacher/TeacherPages'), 'CourseForm');
 const CourseLessons = named(() => import('../pages/teacher/CourseLessons'), 'CourseLessons');
 const CourseStudents = named(() => import('../pages/teacher/CourseLessons'), 'CourseStudents');
-const AdminDashboard = lazy(() => import('../pages/admin/AdminDashboard'));
+const TeacherStudents = named(() => import('../pages/teacher/CourseLessons'), 'TeacherStudents');
+const AdminOverview = lazy(() => import('../pages/admin/AdminOverview'));
+const AdminStats = lazy(() => import('../pages/admin/AdminDashboard'));
+const AdminTeacherRequests = named(() => import('../pages/admin/AdminPages'), 'AdminTeacherRequests');
 const AdminUsers = named(() => import('../pages/admin/AdminPages'), 'AdminUsers');
 const AdminCourses = named(() => import('../pages/admin/AdminPages'), 'AdminCourses');
 const AdminCategories = named(() => import('../pages/admin/AdminPages'), 'AdminCategories');
@@ -59,7 +63,6 @@ export default function App() {
               <Route path="login" element={<Login />} />
               <Route path="register" element={<Register />} />
             </Route>
-            <Route path="forgot-password" element={<ForgotPassword />} />
 
             {/* ---------- Talaba ---------- */}
             <Route path="student" element={<ProtectedRoute roles={['STUDENT']} />}>
@@ -68,6 +71,7 @@ export default function App() {
                 <Route path="dashboard" element={<StudentDashboard />} />
                 <Route path="courses" element={<StudentCourses />} />
                 <Route path="my-courses" element={<MyCourses />} />
+                <Route path="progress" element={<StudentProgress />} />
                 <Route path="learn/:courseId/:lessonId?" element={<Learn />} />
                 <Route path="profile" element={<ProfilePage />} />
               </Route>
@@ -83,6 +87,7 @@ export default function App() {
                 <Route path="courses/:id/edit" element={<CourseForm />} />
                 <Route path="courses/:id/lessons" element={<CourseLessons />} />
                 <Route path="courses/:id/students" element={<CourseStudents />} />
+                <Route path="students" element={<TeacherStudents />} />
                 <Route path="profile" element={<ProfilePage />} />
               </Route>
             </Route>
@@ -91,7 +96,9 @@ export default function App() {
             <Route path="admin" element={<ProtectedRoute roles={['SUPER_ADMIN']} />}>
               <Route element={<DashboardLayout />}>
                 <Route index element={<Navigate to="dashboard" replace />} />
-                <Route path="dashboard" element={<AdminDashboard />} />
+                <Route path="dashboard" element={<AdminOverview />} />
+                <Route path="stats" element={<AdminStats />} />
+                <Route path="teacher-requests" element={<AdminTeacherRequests />} />
                 <Route path="users" element={<AdminUsers />} />
                 <Route path="courses" element={<AdminCourses />} />
                 <Route path="categories" element={<AdminCategories />} />

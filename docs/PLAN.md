@@ -13,7 +13,8 @@ Bu hujjat 28-noyabrgacha o'qituvchiga topshiriladigan rejani o'z ichiga oladi: M
 - kurslar katalogi: qidiruv, kategoriya va daraja bo'yicha filtr, saralash, sahifalash;
 - kurs sahifasi: syllabus va ochiq (preview) dars;
 - kursga yozilish va chiqish, dars sahifasi, "Tugallandi" tugmasi, progress foizi;
-- o'qituvchi uchun: kurs CRUD, darslar CRUD va tartiblash, tekshiruvga yuborish, kurs talabalari;
+- o'qituvchi uchun: kurs CRUD, darslar CRUD va tartiblash, kursni nashr qilish, barcha talabalar ro'yxati;
+- talaba uchun: o'qituvchi bo'lish arizasi (admin qabul qiladi yoki rad etadi);
 - admin uchun: statistika (grafiklar), foydalanuvchilar (rol berish, bloklash), kurslarni tasdiqlash yoki yashirish, kategoriyalar CRUD, bog'lanish xabarlari;
 - profil: ma'lumotlarni tahrirlash, parolni o'zgartirish;
 - telefon va kompyuter uchun moslashuvchan dizayn, loading/empty/error holatlari, 404 va 403 sahifalari.
@@ -38,10 +39,10 @@ Mehmon ──> / (bosh sahifa) ──> /courses (katalog) ──> /courses/:slug
 
 | Guruh | Sahifalar |
 |---|---|
-| Ochiq | `/`, `/courses`, `/courses/:slug`, `/teachers`, `/teachers/:id`, `/about`, `/contact`, `/login`, `/register`, `/forgot-password`, `*` (404) |
-| Talaba | `/student/dashboard`, `/student/courses`, `/student/my-courses`, `/student/learn/:courseId/:lessonId`, `/student/profile` |
-| O'qituvchi | `/teacher/dashboard`, `/teacher/courses`, `/teacher/courses/new`, `/teacher/courses/:id/edit`, `/teacher/courses/:id/lessons`, `/teacher/courses/:id/students`, `/teacher/profile` |
-| Admin | `/admin/dashboard`, `/admin/users`, `/admin/courses`, `/admin/categories`, `/admin/messages`, `/admin/profile` |
+| Ochiq | `/`, `/courses`, `/courses/:slug`, `/teachers`, `/teachers/:id`, `/about`, `/contact`, `/login`, `/register`, `*` (404) |
+| Talaba | `/student/dashboard`, `/student/courses`, `/student/my-courses`, `/student/progress`, `/student/learn/:courseId/:lessonId`, `/student/profile` (o'qituvchilik arizasi shu yerda) |
+| O'qituvchi | `/teacher/dashboard`, `/teacher/courses`, `/teacher/courses/new`, `/teacher/courses/:id/edit`, `/teacher/courses/:id/lessons`, `/teacher/courses/:id/students`, `/teacher/students`, `/teacher/profile` |
+| Admin | `/admin/dashboard` (umumiy ko'rinish), `/admin/users`, `/admin/teacher-requests`, `/admin/courses`, `/admin/categories`, `/admin/stats`, `/admin/messages`, `/admin/profile` |
 
 Ruxsatsiz holatlar:
 - kirmagan foydalanuvchi himoyalangan sahifani ochsa, `/login` ga yo'naltiriladi va login'dan keyin o'sha sahifaga qaytariladi;
@@ -49,9 +50,11 @@ Ruxsatsiz holatlar:
 
 **Kurs hayot sikli:**
 1. O'qituvchi kursni yaratadi — kurs `DRAFT` holatida bo'ladi.
-2. Darslarni qo'shib, "Tekshiruvga yuborish" tugmasini bosadi — `PENDING`.
-3. Admin "Tasdiqlash" tugmasini bosadi — `PUBLISHED`. Kurs katalogda ko'rinadi va talabalar yozila oladi.
-4. Admin xohlagan paytda kursni yashirishi mumkin — `ARCHIVED`.
+2. Darslarni qo'shib, "Nashr qilish" tugmasini bosadi — `PUBLISHED`. Darssiz kursni nashr qilib bo'lmaydi (422). Kurs katalogda ko'rinadi va talabalar yozila oladi.
+3. Admin nojo'ya kursni yashirishi mumkin — `ARCHIVED`. Yashirilgan kursni o'qituvchi o'zi qayta ocholmaydi (403).
+4. Nashr qilingan kursning oxirgi darsi o'chirilsa, kurs avtomatik qoralamaga qaytadi.
+
+**O'qituvchi bo'lish:** talaba Profil sahifasida ariza yuboradi (`PENDING`) → admin "O'qituvchi so'rovlari" sahifasida qabul qiladi (`APPROVED`, rol `TEACHER` bo'ladi) yoki rad etadi (`REJECTED`).
 
 ## C. RBAC jadvali
 
@@ -106,15 +109,15 @@ O'qituvchining namuna loyihasi (Universitet kutubxonasi) bilan solishtirish jadv
 | Qanday rollar bor? | `student`, `librarian` | `STUDENT`, `TEACHER`, `SUPER_ADMIN` |
 | Asosiy obyekt nima? | `books` | `courses` (ichida `lessons`) |
 | Bog'lovchi harakat nima? | `loans`: talaba kitobni bron qiladi | `enrollments`: talaba kursga yoziladi; `lesson_progress`: darsni tugatadi |
-| Qanday biznes qoida bor? | Nusxa qolmagan bo'lsa 409; bitta kitobni ikki marta olib bo'lmaydi | Bitta kursga ikki marta yozilib bo'lmaydi (409). Faqat `PUBLISHED` kursga yozilish mumkin. Kursni faqat admin nashr qiladi. Yopiq dars matnini faqat yozilgan talaba ko'radi. Progress takrorlanmaydi |
+| Qanday biznes qoida bor? | Nusxa qolmagan bo'lsa 409; bitta kitobni ikki marta olib bo'lmaydi | Bitta kursga ikki marta yozilib bo'lmaydi (409). Faqat `PUBLISHED` kursga yozilish mumkin. Darssiz kursni nashr qilib bo'lmaydi; yashirishni faqat admin qiladi. Yopiq dars matnini faqat yozilgan talaba ko'radi. Progress takrorlanmaydi |
 | API jadvali | 11 ta endpoint | [README → REST API](../README.md#rest-api) |
 
 **Uch rolning bog'lanishi (asosiy ssenariy):**
 
-1. O'qituvchi kurs va darslarni yaratadi (`DRAFT`), keyin tekshiruvga yuboradi (`PENDING`).
-2. Super admin "Tekshiruvni kutayotgan kurslar" ro'yxatidan kursni tasdiqlaydi (`PUBLISHED`).
+1. Talaba o'qituvchi bo'lish uchun ariza yuboradi, super admin uni qabul qiladi — foydalanuvchi o'qituvchi bo'ladi.
+2. O'qituvchi kurs va darslarni yaratadi (`DRAFT`), keyin kursni nashr qiladi (`PUBLISHED`). Admin kerak bo'lsa kursni yashiradi (`ARCHIVED`).
 3. Talaba kursni katalogda ko'radi, kursga yoziladi va darslarni tugatadi. Progress foizda hisoblanadi.
 4. O'qituvchi o'z kursidagi talabalarni va ularning progressini ko'radi.
 5. Admin statistikasi yangilanadi. Admin istalgan talabaga o'qituvchi rolini bera oladi yoki uni bloklay oladi, o'zgarish darhol kuchga kiradi.
 
-Bu ssenariy `npm run test:e2e` buyrug'i bilan avtomatik tekshiriladi (37 ta tekshiruv): [backend/scripts/e2e-roles.mjs](../backend/scripts/e2e-roles.mjs).
+Bu ssenariy `npm run test:e2e` buyrug'i bilan avtomatik tekshiriladi (36 ta tekshiruv): [backend/scripts/e2e-roles.mjs](../backend/scripts/e2e-roles.mjs).

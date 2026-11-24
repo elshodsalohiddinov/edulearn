@@ -19,6 +19,7 @@ const lessons = require('../controllers/lessons.controller');
 const enrollments = require('../controllers/enrollments.controller');
 const admin = require('../controllers/admin.controller');
 const pub = require('../controllers/public.controller');
+const teacherRequests = require('../controllers/teacherRequests.controller');
 
 const STUDENT = 'STUDENT';
 const TEACHER = 'TEACHER';
@@ -67,10 +68,17 @@ r.patch('/lessons/:lessonId/progress', authenticate, requireRole(STUDENT), valid
 
 // ---------- O'QITUVCHI ----------
 r.get('/teacher/courses', authenticate, requireRole(TEACHER), courses.teacherCourses);
+r.get('/teacher/students', authenticate, requireRole(TEACHER), enrollments.teacherStudents);
 r.get('/teacher/courses/:courseId/students', authenticate, requireRole(TEACHER, ADMIN), validate({ params: s.courseIdParam }), enrollments.courseStudents);
+
+// ---------- O'QITUVCHI BO'LISH ARIZASI (talaba) ----------
+r.post('/teacher-requests', authenticate, requireRole(STUDENT), validate({ body: s.teacherRequest }), teacherRequests.create);
+r.get('/teacher-requests/my', authenticate, requireRole(STUDENT), teacherRequests.mine);
 
 // ---------- SUPER ADMIN ----------
 r.use('/admin', authenticate, requireRole(ADMIN));
+r.get('/admin/teacher-requests', validate({ query: s.requestQuery }), teacherRequests.list);
+r.patch('/admin/teacher-requests/:id', validate({ params: idParam, body: s.requestDecision }), teacherRequests.decide);
 r.get('/admin/stats', admin.stats);
 r.get('/admin/users', validate({ query: s.userQuery }), admin.users);
 r.patch('/admin/users/:id/role', validate({ params: idParam, body: s.roleUpdate }), admin.setRole);

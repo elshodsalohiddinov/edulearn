@@ -430,12 +430,12 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Node.js asoslari\",\n  \"description\": \"Express bilan REST API yaratish\",\n  \"categoryId\": 1,\n  \"level\": \"INTERMEDIATE\",\n  \"status\": \"DRAFT\"\n}"
+              "raw": "{\n  \"title\": \"Node.js asoslari\",\n  \"shortDescription\": \"Express bilan REST API yaratish\",\n  \"description\": \"Node.js va Express yordamida backend yozishni o'rganamiz.\",\n  \"categoryId\": 1,\n  \"level\": \"INTERMEDIATE\"\n}"
             }
           }
         },
         {
-          "name": "Yangilash (egasi)",
+          "name": "Nashr qilish (egasi)",
           "request": {
             "method": "PATCH",
             "header": [
@@ -457,7 +457,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"status\": \"PENDING\"\n}"
+              "raw": "{\n  \"status\": \"PUBLISHED\"\n}"
             }
           }
         },
@@ -756,6 +756,124 @@
               "query": []
             }
           }
+        },
+        {
+          "name": "Barcha talabalarim",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/teacher/students",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "teacher",
+                "students"
+              ],
+              "query": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "O'qituvchi bo'lish arizasi",
+      "item": [
+        {
+          "name": "Ariza yuborish (talaba)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/teacher-requests",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "teacher-requests"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expertise\": \"Frontend dasturlash\",\n  \"experience\": \"Ikki yildan beri React bilan loyihalar qilaman.\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Mening arizalarim (talaba)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/teacher-requests/my",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "teacher-requests",
+                "my"
+              ],
+              "query": []
+            }
+          }
+        },
+        {
+          "name": "Arizalar (admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/teacher-requests?status=PENDING",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "teacher-requests"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "PENDING"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Qabul qilish (admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/teacher-requests/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "teacher-requests",
+                "1"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"APPROVED\"\n}"
+            }
+          }
         }
       ]
     },
@@ -866,30 +984,25 @@
           }
         },
         {
-          "name": "Kurslar (tekshiruvda)",
+          "name": "Xabarlar",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/admin/courses?status=PENDING",
+              "raw": "{{baseUrl}}/admin/messages",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "admin",
-                "courses"
+                "messages"
               ],
-              "query": [
-                {
-                  "key": "status",
-                  "value": "PENDING"
-                }
-              ]
+              "query": []
             }
           }
         },
         {
-          "name": "Kursni tasdiqlash",
+          "name": "Kursni yashirish",
           "request": {
             "method": "PATCH",
             "header": [
@@ -913,25 +1026,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"status\": \"PUBLISHED\"\n}"
-            }
-          }
-        },
-        {
-          "name": "Xabarlar",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/admin/messages",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "admin",
-                "messages"
-              ],
-              "query": []
+              "raw": "{\n  \"status\": \"ARCHIVED\"\n}"
             }
           }
         }

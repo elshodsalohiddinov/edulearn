@@ -12,12 +12,12 @@ Himoyada har bir talaba **faqat o'zi yozgan kod** bo'yicha javob beradi. O'qituv
    - kursga yoziling, darsni oching, "Tugallandi" tugmasini bosing va progress foizi o'zgarganini ko'rsating.
 3. **O'qituvchi** (`sardor@edulearn.uz`):
    - yangi kurs yarating va unga dars qo'shing;
-   - "Tekshiruvga yuborish" tugmasini bosing;
+   - "Nashr qilish" tugmasini bosing — kurs katalogda paydo bo'ladi;
    - "Talabalar" sahifasida talabalarning progressini ko'rsating.
 4. **Admin** (`admin@edulearn.uz`):
    - statistika grafiklarini ko'rsating;
-   - "Kurslar → Tekshiruvda" bo'limida o'qituvchining kursini tasdiqlang — kurs katalogda paydo bo'ladi;
-   - foydalanuvchiga o'qituvchi rolini bering.
+   - "O'qituvchi so'rovlari" sahifasida talabaning arizasini qabul qiling — u o'qituvchi bo'ladi;
+   - "Barcha kurslar" sahifasida keraksiz kursni yashiring.
 5. **Xavfsizlik:** talaba sifatida `/admin/dashboard` ni oching — 403 sahifasi chiqishini ko'rsating.
 
 ## Ko'p beriladigan savollar va qisqa javoblar

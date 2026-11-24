@@ -19,7 +19,8 @@ function toCard(c) {
     id: c.id,
     title: c.title,
     slug: c.slug,
-    description: c.description.length > 180 ? `${c.description.slice(0, 177)}...` : c.description,
+    // Kartada qisqa tavsif ko'rinadi; eski kurslarda bo'sh bo'lsa to'liq tavsifdan qisqartiramiz
+    shortDescription: c.shortDescription || (c.description.length > 180 ? `${c.description.slice(0, 177)}...` : c.description),
     thumbnailUrl: c.thumbnailUrl,
     level: c.level,
     status: c.status,
@@ -125,10 +126,20 @@ const slugTaken = (exceptId) => async (s) => {
   return Boolean(f && f.id !== exceptId);
 };
 
-// POST /api/v1/courses — faqat o'qituvchi. Yangi kurs DRAFT yoki PENDING holatida bo'ladi,
-// katalogda ko'rinishi uchun admin uni PUBLISHED qilishi kerak.
+// Biznes qoidasi: darsi yo'q kursni nashr qilib bo'lmaydi (talaba bo'sh kursga yozilmasin)
+function assertPublishable(lessonCount) {
+  if (lessonCount < 1) {
+    throw ApiError.unprocessable('Nashr qilish uchun kursda kamida bitta dars bo\'lishi kerak', [
+      { field: 'status', message: 'Avval kamida bitta dars qo\'shing' },
+    ]);
+  }
+}
+
+// POST /api/v1/courses — faqat o'qituvchi. Yangi kursda hali dars yo'q,
+// shuning uchun u qoralama (DRAFT) bo'lib yaratiladi; darslar qo'shilgach nashr qilinadi.
 async function create(req, res) {
   const data = req.valid.body;
+  if (data.status === 'PUBLISHED') assertPublishable(0);
   await assertCategory(data.categoryId);
   const slug = await uniqueSlug(data.title, slugTaken());
   const course = await prisma.course.create({
@@ -144,6 +155,13 @@ async function update(req, res) {
   const data = req.valid.body;
   if (!Object.keys(data).length) throw ApiError.unprocessable('O\'zgartirish uchun maydon yuborilmadi');
   const course = await findManageableCourse(req.user, id);
+  if (data.status) {
+    // Admin yashirgan kursni o'qituvchi o'zi qayta ocholmaydi
+    if (course.status === 'ARCHIVED' && req.user.role !== ROLES.SUPER_ADMIN) {
+      throw ApiError.forbidden('Bu kurs administrator tomonidan yashirilgan. Admin bilan bog\'laning.');
+    }
+    if (data.status === 'PUBLISHED') assertPublishable(await prisma.lesson.count({ where: { courseId: id } }));
+  }
   await assertCategory(data.categoryId);
   if (data.title && data.title !== course.title) data.slug = await uniqueSlug(data.title, slugTaken(id));
   const updated = await prisma.course.update({ where: { id }, data, include: CARD_INCLUDE });

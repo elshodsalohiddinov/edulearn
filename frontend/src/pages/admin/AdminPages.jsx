@@ -2,12 +2,12 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import toast from 'react-hot-toast';
-import { Ban, Check, CheckCircle2, Eye, EyeOff, FolderTree, Mail, Pencil, Plus, Search, Trash2, Users } from 'lucide-react';
+import { Ban, Check, CheckCircle2, Eye, EyeOff, FolderTree, Mail, Pencil, Plus, Rocket, Search, Trash2, UserCheck, Users, X } from 'lucide-react';
 import { Modal, useConfirm } from '../../components/Modal';
 import { TextField } from '../../components/FormField';
 import { CourseThumb } from '../../components/CourseCard';
 import { Avatar, EmptyState, ErrorState, PageHeader, Pagination, RoleBadge, SkeletonGrid, StatusBadge } from '../../components/ui';
-import { adminApi, categoriesApi, coursesApi } from '../../services/coursesApi';
+import { adminApi, categoriesApi, coursesApi, teacherRequestsApi } from '../../services/coursesApi';
 import { useDebounce, useFetch, useTitle } from '../../hooks/useFetch';
 import { useAuth } from '../../contexts/AuthContext';
 import { STATUSES, formatDate, fullName } from '../../utils/format';
@@ -150,11 +150,11 @@ export function AdminCourses() {
 
   return (
     <div>
-      <PageHeader title="Kurslar nazorati" subtitle="O'qituvchilar yuborgan kurslarni tasdiqlang yoki yashiring." />
+      <PageHeader title="Barcha kurslar" subtitle="Nojo'ya yoki keraksiz kursni yashiring; yashirilgan kurs katalogda ko'rinmaydi." />
       <div className="mb-4 flex flex-wrap gap-3">
         <SearchInput value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Kurs nomi..." />
         <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Holat">
-          {[['', 'Barchasi'], ...Object.entries(STATUSES).map(([k, v]) => [k, v.label])].map(([k, label]) => (
+          {[['', 'Barchasi'], ...['PUBLISHED', 'DRAFT', 'ARCHIVED'].map((k) => [k, STATUSES[k].label])].map(([k, label]) => (
             <button
               key={k || 'all'}
               type="button"
@@ -181,7 +181,7 @@ export function AdminCourses() {
                 <p className="text-sm text-muted">{fullName(c.teacher)} · {c.lessonCount} dars · {c.studentCount} talaba · {formatDate(c.updatedAt)}</p>
               </div>
               <div className="flex flex-wrap gap-2">
-                {c.status !== 'PUBLISHED' && <button type="button" className="btn btn-primary btn-sm" onClick={() => setCourseStatus(c, 'PUBLISHED')}><Check /> Tasdiqlash</button>}
+                {c.status === 'ARCHIVED' && <button type="button" className="btn btn-primary btn-sm" onClick={() => setCourseStatus(c, 'PUBLISHED')}><Rocket /> Qayta nashr qilish</button>}
                 {c.status !== 'ARCHIVED' && <button type="button" className="btn btn-outline btn-sm" onClick={() => setCourseStatus(c, 'ARCHIVED')}><EyeOff /> Yashirish</button>}
                 <Link to={`/courses/${c.slug}`} className="btn btn-ghost btn-sm btn-icon" aria-label="Ko'rish"><Eye /></Link>
                 <button type="button" className="btn btn-danger btn-sm btn-icon" onClick={() => remove(c)} aria-label="O'chirish"><Trash2 /></button>
@@ -288,6 +288,82 @@ export function AdminMessages() {
           ))}
         </div>
       ) : <div className="card"><EmptyState icon={Mail} title="Xabarlar yo'q" /></div>)}
+      <Pagination meta={meta} onPage={setPage} />
+    </div>
+  );
+}
+
+// ======================= O'qituvchi so'rovlari =======================
+const REQUEST_TABS = [['PENDING', 'Kutilmoqda'], ['APPROVED', 'Qabul qilingan'], ['REJECTED', 'Rad etilgan']];
+
+export function AdminTeacherRequests() {
+  useTitle('O\'qituvchi so\'rovlari');
+  const confirm = useConfirm();
+  const [status, setStatus] = useState('PENDING');
+  const [page, setPage] = useState(1);
+  const { data, meta, loading, error, reload } = useFetch(() => teacherRequestsApi.list({ status, page, limit: 10 }), [status, page]);
+
+  const decide = async (r, decision) => {
+    const approve = decision === 'APPROVED';
+    const ok = await confirm({
+      title: approve ? 'Arizani qabul qilish' : 'Arizani rad etish',
+      message: approve
+        ? `${fullName(r.user)} o'qituvchi bo'ladi va kurs yarata oladi.`
+        : `${fullName(r.user)} talaba bo'lib qoladi. U keyinroq qayta ariza yuborishi mumkin.`,
+      confirmText: approve ? 'Qabul qilish' : 'Rad etish',
+      danger: !approve,
+    });
+    if (!ok) return;
+    try {
+      await teacherRequestsApi.decide(r.id, decision);
+      toast.success(approve ? 'Qabul qilindi — foydalanuvchi endi o\'qituvchi' : 'Ariza rad etildi');
+      reload();
+    } catch (e) { toast.error(e.message); }
+  };
+
+  return (
+    <div className="max-w-4xl">
+      <PageHeader title="O'qituvchi so'rovlari" subtitle="Talabalar o'qituvchi bo'lish uchun yuborgan arizalar" />
+      <div className="mb-4 flex flex-wrap gap-1.5" role="tablist" aria-label="Ariza holati">
+        {REQUEST_TABS.map(([k, label]) => (
+          <button key={k} type="button" role="tab" aria-selected={status === k} className={`btn btn-sm ${status === k ? 'btn-primary' : 'btn-outline'}`} onClick={() => { setStatus(k); setPage(1); }}>
+            {label}
+          </button>
+        ))}
+      </div>
+      {loading && <SkeletonGrid count={2} className="h-40" />}
+      {error && <ErrorState error={error} onRetry={reload} />}
+      {data && (data.length ? (
+        <div className="grid gap-3">
+          {data.map((r) => (
+            <article key={r.id} className="card p-5">
+              <div className="flex flex-wrap items-start gap-3">
+                <Avatar user={r.user} />
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold">{fullName(r.user)} <RoleBadge role={r.user.role} /></p>
+                  <p className="text-sm text-muted">{r.user.email} · {formatDate(r.createdAt)}</p>
+                </div>
+                {r.status === 'PENDING' ? (
+                  <div className="flex gap-2">
+                    <button type="button" className="btn btn-primary btn-sm" onClick={() => decide(r, 'APPROVED')}><Check /> Qabul qilish</button>
+                    <button type="button" className="btn btn-danger btn-sm" onClick={() => decide(r, 'REJECTED')}><X /> Rad etish</button>
+                  </div>
+                ) : (
+                  <span className={`badge ${r.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}`}>
+                    {r.status === 'APPROVED' ? 'Qabul qilingan' : 'Rad etilgan'} · {formatDate(r.reviewedAt)}
+                  </span>
+                )}
+              </div>
+              <dl className="mt-4 grid gap-3 sm:grid-cols-[180px_1fr]">
+                <dt className="text-sm font-semibold text-muted">Mutaxassislik</dt>
+                <dd>{r.expertise}</dd>
+                <dt className="text-sm font-semibold text-muted">Tajriba</dt>
+                <dd className="whitespace-pre-line text-ink/85">{r.experience}</dd>
+              </dl>
+            </article>
+          ))}
+        </div>
+      ) : <div className="card"><EmptyState icon={UserCheck} title="Ariza yo'q" text="Bu holatda hech qanday ariza topilmadi." /></div>)}
       <Pagination meta={meta} onPage={setPage} />
     </div>
   );

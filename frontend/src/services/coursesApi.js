@@ -34,6 +34,15 @@ export const enrollmentApi = {
 export const teacherApi = {
   courses: () => api.get('/teacher/courses').then(dataOf),
   students: (courseId) => api.get(`/teacher/courses/${courseId}/students`).then(dataOf),
+  allStudents: () => api.get('/teacher/students').then(dataOf),
+};
+
+// O'qituvchi bo'lish arizasi: talaba yuboradi, admin ko'rib chiqadi
+export const teacherRequestsApi = {
+  create: (body) => api.post('/teacher-requests', body).then(dataOf),
+  mine: () => api.get('/teacher-requests/my').then(dataOf),
+  list: (params) => api.get('/admin/teacher-requests', { params }).then(unwrap),
+  decide: (id, status) => api.patch(`/admin/teacher-requests/${id}`, { status }).then(dataOf),
 };
 
 export const publicApi = {

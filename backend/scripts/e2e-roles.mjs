@@ -83,6 +83,7 @@ try {
   const title = 'Integratsiya testi ' + Date.now();
   let r = await teacher.req('POST', '/courses', {
     title,
+    shortDescription: 'Vaqtinchalik integratsiya kursi',
     description: "Uchala rolning bog'lanishini tekshiruvchi vaqtinchalik kurs.",
     categoryId,
     level: 'BEGINNER',
@@ -104,14 +105,12 @@ try {
   check('talaba DRAFT kursga yozila olmaydi', [403, 404, 409].includes((await student.req('POST', `/courses/${courseId}/enroll`)).status));
   check("boshqa o'qituvchi bu kursni tahrirlay olmaydi (403)", (await teacher2.req('PATCH', `/courses/${courseId}`, { title: 'Begona tahrir' })).status === 403);
 
-  // ---- 2. O'qituvchi tekshiruvga yuboradi, admin tasdiqlaydi ----
-  r = await teacher.req('PATCH', `/courses/${courseId}`, { status: 'PENDING' });
-  check("o'qituvchi tekshiruvga yubordi (PENDING)", r.status === 200 && r.data?.data?.status === 'PENDING', short(r.data));
-  check("o'qituvchi o'zi PUBLISHED qila olmaydi (422)", (await teacher.req('PATCH', `/courses/${courseId}`, { status: 'PUBLISHED' })).status === 422);
-  r = await admin.req('GET', '/admin/courses?status=PENDING&limit=50');
-  check("admin 'tekshiruvni kutayotgan' ro'yxatida ko'radi", (r.data?.data || []).some((c) => c.id === courseId));
-  r = await admin.req('PATCH', `/admin/courses/${courseId}/status`, { status: 'PUBLISHED' });
-  check('admin tasdiqladi (PUBLISHED)', r.status === 200 && r.data?.data?.status === 'PUBLISHED', short(r.data));
+  // ---- 2. O'qituvchi nashr qiladi, admin nazorat qiladi ----
+  check("o'qituvchi ARCHIVED qo'ya olmaydi (422)", (await teacher.req('PATCH', `/courses/${courseId}`, { status: 'ARCHIVED' })).status === 422);
+  r = await teacher.req('PATCH', `/courses/${courseId}`, { status: 'PUBLISHED' });
+  check("o'qituvchi kursni nashr qildi (PUBLISHED)", r.status === 200 && r.data?.data?.status === 'PUBLISHED', short(r.data));
+  r = await admin.req('GET', '/admin/courses?status=PUBLISHED&limit=50');
+  check("admin nashr qilingan kursni barcha kurslar ro'yxatida ko'radi", (r.data?.data || []).some((c) => c.id === courseId));
 
   // ---- 3. Mehmon va talaba ----
   r = await guest.req('GET', `/courses?search=${encodeURIComponent(title)}`);

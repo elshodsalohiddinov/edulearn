@@ -1,13 +1,14 @@
-// Talaba paneli: bosh sahifa, barcha kurslar, mening kurslarim.
+// Talaba paneli: bosh sahifa, barcha kurslar, mening kurslarim, progress.
+import { useState } from 'react';
 import { Link } from 'react-router';
-import { ArrowRight, BookOpen, CheckCircle2, GraduationCap, Layers, PlayCircle, Signal } from 'lucide-react';
+import { ArrowRight, BarChart3, BookOpen, CheckCircle2, GraduationCap, Layers, PlayCircle, Search, Signal } from 'lucide-react';
 import CourseCatalog from '../../components/CourseCatalog';
 import { CourseThumb } from '../../components/CourseCard';
 import { EmptyState, ErrorState, PageHeader, ProgressBar, SkeletonGrid, StatCard } from '../../components/ui';
 import { coursesApi, enrollmentApi } from '../../services/coursesApi';
 import { useFetch, useTitle } from '../../hooks/useFetch';
 import { useAuth } from '../../contexts/AuthContext';
-import { LEVELS, fullName } from '../../utils/format';
+import { LEVELS, cn, formatDate, fullName } from '../../utils/format';
 
 function MyCourseCard({ item }) {
   const { course, progress } = item;
@@ -111,23 +112,109 @@ export function StudentCourses() {
   );
 }
 
+const FILTERS = [['all', 'Barchasi'], ['active', 'Davom etayotgan'], ['done', 'Yakunlangan']];
+
 export function MyCourses() {
   useTitle('Mening kurslarim');
   const { data, meta, loading, error, reload } = useFetch(() => enrollmentApi.mine(), []);
+  const [filter, setFilter] = useState('all');
+  const [query, setQuery] = useState('');
+
+  // Filtr va qidiruv brauzerda bajariladi — talabaning kurslari soni kichik
+  const q = query.trim().toLowerCase();
+  const items = (data || [])
+    .filter((i) => (filter === 'all' ? true : filter === 'done' ? i.progress.isCompleted : !i.progress.isCompleted))
+    .filter((i) => !q || i.course.title.toLowerCase().includes(q) || fullName(i.course.teacher).toLowerCase().includes(q));
+
   return (
     <div>
       <PageHeader
         title="Mening kurslarim"
-        subtitle={meta ? `${meta.total} ta kurs · ${meta.completed} tasi yakunlangan` : undefined}
+        subtitle={meta ? `${meta.total} ta kurs · ${meta.inProgress} tasi davom etmoqda · ${meta.completed} tasi yakunlangan` : undefined}
         actions={<Link to="/student/courses" className="btn btn-primary"><Layers /> Yangi kurs topish</Link>}
       />
+      <div className="mb-5 flex flex-wrap items-center gap-3">
+        <div className="flex gap-1.5" role="tablist" aria-label="Holat bo'yicha filtr">
+          {FILTERS.map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={filter === key}
+              onClick={() => setFilter(key)}
+              className={cn('btn btn-sm', filter === key ? 'btn-primary' : 'btn-outline')}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <label className="relative ml-auto w-full sm:w-72">
+          <span className="sr-only">Kurs yoki o'qituvchi bo'yicha qidirish</span>
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 size-5 -translate-y-1/2 text-muted" aria-hidden="true" />
+          <input type="search" className="input pl-11" placeholder="Kurs yoki o'qituvchi..." value={query} onChange={(e) => setQuery(e.target.value)} />
+        </label>
+      </div>
       {loading && <SkeletonGrid count={4} className="h-36" />}
       {error && <ErrorState error={error} onRetry={reload} />}
-      {data && (data.length ? (
-        <div className="grid gap-4 xl:grid-cols-2">{data.map((i) => <MyCourseCard key={i.enrollmentId} item={i} />)}</div>
+      {data && (data.length === 0 ? (
+        <div className="card"><EmptyState icon={BookOpen} title="Hali kursga yozilmagansiz" text="Katalogdan o'zingizga yoqqan kursni tanlang." action={<Link to="/student/courses" className="btn btn-primary">Kurslarni ko'rish</Link>} /></div>
+      ) : items.length ? (
+        <div className="grid gap-4 xl:grid-cols-2">{items.map((i) => <MyCourseCard key={i.enrollmentId} item={i} />)}</div>
       ) : (
-        <div className="card"><EmptyState icon={BookOpen} title="Kurslar yo'q" text="Hali birorta kursga yozilmagansiz." action={<Link to="/student/courses" className="btn btn-primary">Katalogga o'tish</Link>} /></div>
+        <div className="card"><EmptyState icon={Search} title="Mos kurs topilmadi" text="Filtrni yoki qidiruv so'zini o'zgartirib ko'ring." /></div>
       ))}
+    </div>
+  );
+}
+
+// Progress: har bir kurs bo'yicha tugatilgan darslar va foiz (formula: tugatilgan / jami × 100)
+export function StudentProgress() {
+  useTitle('Progress');
+  const { data, meta, loading, error, reload } = useFetch(() => enrollmentApi.mine(), []);
+  const items = data || [];
+  const totalLessons = items.reduce((s, i) => s + i.progress.total, 0);
+  const doneLessons = items.reduce((s, i) => s + i.progress.completed, 0);
+  const overall = totalLessons ? Math.round((doneLessons / totalLessons) * 100) : 0;
+
+  return (
+    <div>
+      <PageHeader title="Progress" subtitle="Har bir kurs bo'yicha o'qish natijalaringiz" />
+      <div className="grid gap-4 sm:grid-cols-3">
+        <StatCard icon={BarChart3} label="Umumiy progress" value={loading ? '—' : `${overall}%`} />
+        <StatCard icon={PlayCircle} label="Tugatilgan darslar" value={loading ? '—' : `${doneLessons} / ${totalLessons}`} tone="blue" />
+        <StatCard icon={CheckCircle2} label="Yakunlangan kurslar" value={meta?.completed ?? '—'} tone="green" />
+      </div>
+      <div className="mt-6">
+        {loading && <SkeletonGrid count={1} className="h-64" />}
+        {error && <ErrorState error={error} onRetry={reload} />}
+        {data && (items.length ? (
+          <div className="card overflow-x-auto">
+            <table className="w-full min-w-[640px] text-sm">
+              <thead className="text-left text-muted">
+                <tr className="border-b border-line">
+                  <th className="px-4 py-3 font-semibold">Kurs</th>
+                  <th className="px-4 py-3 font-semibold">Darslar</th>
+                  <th className="w-2/5 px-4 py-3 font-semibold">Progress</th>
+                  <th className="px-4 py-3 font-semibold">Yozilgan sana</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((i) => (
+                  <tr key={i.enrollmentId} className="border-b border-line last:border-0">
+                    <td className="px-4 py-3">
+                      <Link to={`/courses/${i.course.slug}`} className="font-semibold hover:text-brand-700">{i.course.title}</Link>
+                      <p className="text-muted">{fullName(i.course.teacher)}</p>
+                    </td>
+                    <td className="px-4 py-3 tabular-nums">{i.progress.completed} / {i.progress.total}</td>
+                    <td className="px-4 py-3"><ProgressBar value={i.progress.percent} /></td>
+                    <td className="px-4 py-3 text-muted">{formatDate(i.enrolledAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : <div className="card"><EmptyState icon={BarChart3} title="Hali progress yo'q" text="Kursga yozilib, birinchi darsni tugating." action={<Link to="/student/courses" className="btn btn-primary">Kurslarni ko'rish</Link>} /></div>)}
+      </div>
     </div>
   );
 }

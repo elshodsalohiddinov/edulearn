@@ -193,3 +193,55 @@ export function CourseStudents() {
     </div>
   );
 }
+
+// Barcha kurslarim talabalari (sidebar -> "Talabalar"). Faqat o'z kurslari — backend shuni tekshiradi.
+export function TeacherStudents() {
+  useTitle('Talabalarim');
+  const { data, loading, error, reload } = useFetch(() => teacherApi.allStudents(), []);
+  const [courseId, setCourseId] = useState('');
+  const list = (data || []).filter((r) => !courseId || String(r.course.id) === courseId);
+  const courses = [...new Map((data || []).map((r) => [r.course.id, r.course])).values()];
+
+  return (
+    <div>
+      <PageHeader title="Talabalarim" subtitle="Kurslaringizga yozilgan talabalar va ularning progressi" />
+      {loading && <PageLoader />}
+      {error && <ErrorState error={error} onRetry={reload} />}
+      {data && (data.length ? (
+        <>
+          <label className="mb-4 block w-full sm:w-80">
+            <span className="sr-only">Kurs bo'yicha filtr</span>
+            <select className="input" value={courseId} onChange={(e) => setCourseId(e.target.value)}>
+              <option value="">Barcha kurslar ({data.length} ta yozilish)</option>
+              {courses.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
+            </select>
+          </label>
+          <div className="card overflow-x-auto">
+            <table className="w-full min-w-[720px] text-sm">
+              <thead className="text-left text-muted">
+                <tr className="border-b border-line">
+                  <th className="px-4 py-3 font-semibold">Talaba</th>
+                  <th className="px-4 py-3 font-semibold">Kurs</th>
+                  <th className="w-1/4 px-4 py-3 font-semibold">Progress</th>
+                  <th className="px-4 py-3 font-semibold">Yozilgan sana</th>
+                </tr>
+              </thead>
+              <tbody>
+                {list.map((r) => (
+                  <tr key={r.enrollmentId} className="border-b border-line last:border-0">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3"><Avatar user={r.student} size="size-9 text-xs" /><div><p className="font-semibold">{fullName(r.student)}</p><p className="text-muted">{r.student.email}</p></div></div>
+                    </td>
+                    <td className="px-4 py-3"><Link to={`/teacher/courses/${r.course.id}/students`} className="hover:text-brand-700">{r.course.title}</Link></td>
+                    <td className="px-4 py-3"><ProgressBar value={r.progress.percent} /></td>
+                    <td className="px-4 py-3 text-muted">{formatDate(r.enrolledAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      ) : <div className="card"><EmptyState icon={Users} title="Hali talaba yo'q" text="Kursingizni nashr qilgach, talabalar yozila boshlaydi." /></div>)}
+    </div>
+  );
+}

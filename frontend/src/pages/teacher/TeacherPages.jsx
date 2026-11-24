@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
-import { BookOpen, Eye, ListOrdered, Pencil, PlayCircle, Plus, Send, Trash2, Users } from 'lucide-react';
+import { BookOpen, Eye, EyeOff, ListOrdered, Pencil, PlayCircle, Plus, Rocket, Trash2, Users } from 'lucide-react';
 import { CourseThumb } from '../../components/CourseCard';
 import { TextField, applyServerErrors } from '../../components/FormField';
 import { useConfirm } from '../../components/Modal';
@@ -32,18 +32,19 @@ function useCourseActions(reload) {
       reload();
     } catch (e) { toast.error(e.message); }
   };
-  const submit = async (c) => {
+  // Nashr qilish / qoralamaga qaytarish. Backend darssiz kursni nashr qildirmaydi (422).
+  const setStatus = async (c, status) => {
     try {
-      await coursesApi.update(c.id, { status: 'PENDING' });
-      toast.success('Kurs tekshiruvga yuborildi. Admin tasdiqlagach katalogda ko\'rinadi.');
+      await coursesApi.update(c.id, { status });
+      toast.success(status === 'PUBLISHED' ? 'Kurs nashr qilindi — endi katalogda ko\'rinadi' : 'Kurs qoralamaga qaytarildi');
       reload();
     } catch (e) { toast.error(e.message); }
   };
-  return { remove, submit };
+  return { remove, setStatus };
 }
 
 function CoursesTable({ items, reload }) {
-  const { remove, submit } = useCourseActions(reload);
+  const { remove, setStatus } = useCourseActions(reload);
   if (!items.length) {
     return (
       <div className="card">
@@ -63,14 +64,21 @@ function CoursesTable({ items, reload }) {
               <span className="text-xs text-muted">{c.category.name}</span>
             </div>
             <h3 className="mt-1.5 truncate text-lg font-bold">{c.title}</h3>
+            <p className="line-clamp-1 text-sm text-muted">{c.shortDescription}</p>
             <p className="text-sm text-muted">{c.lessonCount} dars · {c.studentCount} talaba</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            {(c.status === 'DRAFT' || c.status === 'ARCHIVED') && (
-              <button type="button" className="btn btn-soft btn-sm" onClick={() => submit(c)} disabled={!c.lessonCount} title={c.lessonCount ? '' : 'Avval kamida bitta dars qo\'shing'}>
-                <Send /> Tekshiruvga yuborish
+            {(c.status === 'DRAFT' || c.status === 'PENDING') && (
+              <button type="button" className="btn btn-primary btn-sm" onClick={() => setStatus(c, 'PUBLISHED')} disabled={!c.lessonCount} title={c.lessonCount ? 'Katalogda ko\'rinsin' : 'Avval kamida bitta dars qo\'shing'}>
+                <Rocket /> Nashr qilish
               </button>
             )}
+            {c.status === 'PUBLISHED' && (
+              <button type="button" className="btn btn-outline btn-sm" onClick={() => setStatus(c, 'DRAFT')}>
+                <EyeOff /> Qoralamaga
+              </button>
+            )}
+            {c.status === 'ARCHIVED' && <span className="badge bg-red-50 text-red-600">Admin yashirgan</span>}
             <Link to={`/teacher/courses/${c.id}/lessons`} className="btn btn-outline btn-sm"><ListOrdered /> Darslar</Link>
             <Link to={`/teacher/courses/${c.id}/students`} className="btn btn-outline btn-sm"><Users /> Talabalar</Link>
             <Link to={`/courses/${c.slug}`} className="btn btn-ghost btn-sm btn-icon" aria-label="Ko'rish"><Eye /></Link>
@@ -103,7 +111,7 @@ export function TeacherDashboard() {
         <StatCard icon={BookOpen} label="Mening kurslarim" value={loading ? '—' : items.length} />
         <StatCard icon={Users} label="Jami yozilishlar" value={loading ? '—' : sum('studentCount')} tone="blue" />
         <StatCard icon={PlayCircle} label="Jami darslar" value={loading ? '—' : sum('lessonCount')} tone="green" />
-        <StatCard icon={Send} label="Nashr qilingan" value={loading ? '—' : items.filter((c) => c.status === 'PUBLISHED').length} tone="amber" />
+        <StatCard icon={Rocket} label="Nashr qilingan" value={loading ? '—' : items.filter((c) => c.status === 'PUBLISHED').length} tone="amber" />
       </div>
       <h2 className="mb-4 mt-8 text-xl font-bold">Oxirgi kurslar</h2>
       {loading && <SkeletonGrid count={3} className="h-24" />}
@@ -120,7 +128,7 @@ export function TeacherCourses() {
     <div>
       <PageHeader
         title="Mening kurslarim"
-        subtitle="Yangi kurs qoralama sifatida yaratiladi. Tekshiruvga yuboring — admin tasdiqlagach katalogda ko'rinadi."
+        subtitle="Yangi kurs qoralama sifatida yaratiladi. Darslar qo'shib, «Nashr qilish» ni bosing — kurs katalogda ko'rinadi."
         actions={<Link to="/teacher/courses/new" className="btn btn-primary"><Plus /> Yangi kurs</Link>}
       />
       {loading && <SkeletonGrid count={3} className="h-24" />}
@@ -132,11 +140,12 @@ export function TeacherCourses() {
 
 const courseSchema = z.object({
   title: z.string().trim().min(3, 'Kamida 3 ta belgi').max(150),
+  shortDescription: z.string().trim().min(10, 'Qisqa tavsif kamida 10 ta belgi').max(200, 'Ko\'pi bilan 200 ta belgi'),
   description: z.string().trim().min(10, 'Tavsif kamida 10 ta belgidan iborat bo\'lsin').max(5000),
   categoryId: z.coerce.number({ message: 'Kategoriyani tanlang' }).int().positive('Kategoriyani tanlang'),
   level: z.enum(['BEGINNER', 'INTERMEDIATE', 'ADVANCED']),
   thumbnailUrl: z.union([z.literal(''), z.string().trim().url('To\'g\'ri havola kiriting (https://...)')]).optional(),
-  status: z.enum(['DRAFT', 'PENDING']).optional(),
+  status: z.enum(['DRAFT', 'PUBLISHED']).optional(),
 });
 
 export function CourseForm() {
@@ -149,12 +158,12 @@ export function CourseForm() {
 
   const { register, handleSubmit, reset, setError, watch, formState: { errors, isSubmitting } } = useForm({
     resolver: zodResolver(courseSchema),
-    defaultValues: { title: '', description: '', categoryId: '', level: 'BEGINNER', thumbnailUrl: '', status: 'DRAFT' },
+    defaultValues: { title: '', shortDescription: '', description: '', categoryId: '', level: 'BEGINNER', thumbnailUrl: '', status: 'DRAFT' },
   });
 
   useEffect(() => {
     const c = existing.data;
-    if (c) reset({ title: c.title, description: c.description, categoryId: c.categoryId, level: c.level, thumbnailUrl: c.thumbnailUrl || '' });
+    if (c) reset({ title: c.title, shortDescription: c.shortDescription, description: c.description, categoryId: c.categoryId, level: c.level, thumbnailUrl: c.thumbnailUrl || '', status: c.status === 'PUBLISHED' ? 'PUBLISHED' : 'DRAFT' });
   }, [existing.data, reset]);
 
   if (existing.loading) return <PageLoader />;
@@ -164,7 +173,8 @@ export function CourseForm() {
   const onSubmit = async (values) => {
     try {
       const body = { ...values };
-      if (isEdit) delete body.status;
+      // Yangi kursda dars hali yo'q — u qoralama bo'lib yaratiladi; admin yashirgan kurs holatiga tegmaymiz
+      if (!isEdit || existing.data?.status === 'ARCHIVED') delete body.status;
       const c = isEdit ? await coursesApi.update(id, body) : await coursesApi.create(body);
       toast.success(isEdit ? 'Kurs saqlandi' : 'Kurs yaratildi. Endi darslar qo\'shing!');
       navigate(isEdit ? '/teacher/courses' : `/teacher/courses/${c.id}/lessons`);
@@ -182,7 +192,8 @@ export function CourseForm() {
       <form className="card grid gap-6 p-6 md:grid-cols-[1fr_240px]" onSubmit={handleSubmit(onSubmit)} noValidate>
         <div>
           <TextField label="Kurs nomi" placeholder="Masalan: React.js asoslari" {...register('title')} error={errors.title?.message} />
-          <TextField label="Tavsif" as="textarea" rows={5} placeholder="Kurs nima haqida, kimlar uchun, nimalarni o'rganadi?" {...register('description')} error={errors.description?.message} />
+          <TextField label="Qisqa tavsif" placeholder="Kurs kartasida ko'rinadigan 1 gap" hint="10–200 belgi" {...register('shortDescription')} error={errors.shortDescription?.message} />
+          <TextField label="To'liq tavsif" as="textarea" rows={5} placeholder="Kurs nima haqida, kimlar uchun, nimalarni o'rganadi?" {...register('description')} error={errors.description?.message} />
           <div className="grid gap-x-4 sm:grid-cols-2">
             <TextField label="Kategoriya" as="select" {...register('categoryId')} error={errors.categoryId?.message}>
               <option value="">Tanlang...</option>
@@ -193,12 +204,13 @@ export function CourseForm() {
             </TextField>
           </div>
           <TextField label="Muqova rasmi havolasi (ixtiyoriy)" placeholder="https://..." hint="Bo'sh qoldirilsa, kategoriya rangidagi muqova ishlatiladi" {...register('thumbnailUrl')} error={errors.thumbnailUrl?.message} />
-          {!isEdit && (
-            <TextField label="Holat" as="select" {...register('status')}>
-              <option value="DRAFT">Qoralama (keyin yuboraman)</option>
-              <option value="PENDING">Darhol tekshiruvga yuborish</option>
+          {isEdit && existing.data?.status !== 'ARCHIVED' && (
+            <TextField label="Holat" as="select" hint="Nashr qilish uchun kursda kamida bitta dars bo'lishi kerak" {...register('status')} error={errors.status?.message}>
+              <option value="DRAFT">Qoralama (faqat siz ko'rasiz)</option>
+              <option value="PUBLISHED">Nashr (katalogda hamma ko'radi)</option>
             </TextField>
           )}
+          {!isEdit && <p className="mb-4 rounded-xl bg-brand-50 px-4 py-3 text-sm text-brand-800">Kurs qoralama sifatida yaratiladi. Keyingi qadamda darslar qo'shasiz va kursni nashr qilasiz.</p>}
           <div className="flex flex-wrap gap-2 pt-2">
             <button type="submit" className="btn btn-primary" disabled={isSubmitting}>{isSubmitting ? 'Saqlanmoqda...' : isEdit ? 'Saqlash' : 'Kursni yaratish'}</button>
             <Link to="/teacher/courses" className="btn btn-outline">Bekor qilish</Link>

@@ -3,12 +3,13 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
-import { KeyRound, Save } from 'lucide-react';
+import { Clock, GraduationCap, KeyRound, Save, Send, XCircle } from 'lucide-react';
 import { PasswordField, TextField, applyServerErrors } from '../components/FormField';
 import { Avatar, PageHeader, RoleBadge } from '../components/ui';
 import { usersApi } from '../services/authApi';
+import { teacherRequestsApi } from '../services/coursesApi';
 import { useAuth } from '../contexts/AuthContext';
-import { useTitle } from '../hooks/useFetch';
+import { useFetch, useTitle } from '../hooks/useFetch';
 import { formatDate } from '../utils/format';
 
 const profileSchema = z.object({
@@ -92,6 +93,65 @@ export default function ProfilePage() {
           <button type="submit" className="btn btn-outline" disabled={pwd.formState.isSubmitting}><KeyRound /> Parolni yangilash</button>
         </form>
       </div>
+      {user.role === 'STUDENT' && <TeacherRequestCard />}
     </div>
+  );
+}
+
+const requestSchema = z.object({
+  expertise: z.string().trim().min(3, 'Kamida 3 ta belgi').max(100),
+  experience: z.string().trim().min(20, 'Tajribangiz haqida kamida 20 ta belgi yozing').max(2000),
+});
+
+// "O'qituvchi bo'lish uchun ariza": talaba yuboradi, super admin ko'rib chiqadi.
+// Rol shu yerda o'zgarmaydi — faqat admin qabul qilgach (backendda) TEACHER bo'ladi.
+function TeacherRequestCard() {
+  const { data, loading, reload } = useFetch(() => teacherRequestsApi.mine(), []);
+  const form = useForm({ resolver: zodResolver(requestSchema) });
+  const last = data?.[0];
+
+  const submit = async (values) => {
+    try {
+      await teacherRequestsApi.create(values);
+      toast.success("Ariza yuborildi. Administrator ko'rib chiqadi.");
+      form.reset();
+      reload();
+    } catch (e) {
+      applyServerErrors(e, form.setError);
+      toast.error(e.message);
+    }
+  };
+
+  if (loading) return null;
+  return (
+    <section className="card mt-6 p-6">
+      <h2 className="flex items-center gap-2 text-lg font-bold"><GraduationCap className="size-5 text-brand-600" /> O'qituvchi bo'lish uchun ariza</h2>
+      {last?.status === 'PENDING' ? (
+        <div className="mt-4 flex gap-3 rounded-xl bg-amber-50 p-4 text-amber-800">
+          <Clock className="mt-0.5 size-5 shrink-0" />
+          <div>
+            <p className="font-semibold">Arizangiz ko'rib chiqilmoqda</p>
+            <p className="text-sm">Yuborilgan: {formatDate(last.createdAt)} · Mutaxassislik: {last.expertise}</p>
+          </div>
+        </div>
+      ) : (
+        <>
+          {last?.status === 'REJECTED' && (
+            <div className="mt-4 flex gap-3 rounded-xl bg-red-50 p-4 text-red-700">
+              <XCircle className="mt-0.5 size-5 shrink-0" />
+              <p className="text-sm">Oldingi arizangiz ({formatDate(last.reviewedAt)}) rad etilgan. Ma'lumotlarni to'ldirib, qayta yuborishingiz mumkin.</p>
+            </div>
+          )}
+          <p className="mt-2 text-muted">Kurs yaratmoqchi bo'lsangiz, ariza qoldiring. Administrator qabul qilgach, keyingi kirishingizda o'qituvchi paneli ochiladi.</p>
+          <form className="mt-4 grid gap-x-4 md:grid-cols-[1fr_2fr]" onSubmit={form.handleSubmit(submit)} noValidate>
+            <TextField label="Mutaxassislik" placeholder="Masalan: Frontend dasturlash" {...form.register('expertise')} error={form.formState.errors.expertise?.message} />
+            <TextField label="Tajribangiz haqida" as="textarea" rows={3} placeholder="Qayerda, qancha vaqt ishlagansiz, nimani o'rgata olasiz?" {...form.register('experience')} error={form.formState.errors.experience?.message} />
+            <div className="md:col-span-2">
+              <button type="submit" className="btn btn-primary" disabled={form.formState.isSubmitting}><Send /> Ariza yuborish</button>
+            </div>
+          </form>
+        </>
+      )}
+    </section>
   );
 }

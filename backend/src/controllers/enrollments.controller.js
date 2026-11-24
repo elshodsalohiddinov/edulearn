@@ -109,4 +109,24 @@ async function courseStudents(req, res) {
   })));
 }
 
-module.exports = { enroll, unenroll, myEnrollments, courseProgress, setLessonProgress, courseStudents };
+// GET /api/v1/teacher/students — o'qituvchining BARCHA kurslariga yozilgan talabalar (boshqa o'qituvchinikilar emas)
+async function teacherStudents(req, res) {
+  const rows = await prisma.enrollment.findMany({
+    where: { course: { teacherId: req.user.id } },
+    orderBy: { enrolledAt: 'desc' },
+    include: {
+      student: { select: { id: true, firstName: true, lastName: true, email: true, avatarUrl: true } },
+      course: { select: { id: true, title: true, slug: true } },
+    },
+  });
+  const progressOf = await getProgressMap([...new Set(rows.map((r) => r.studentId))], [...new Set(rows.map((r) => r.courseId))]);
+  sendSuccess(res, rows.map((r) => ({
+    enrollmentId: r.id,
+    enrolledAt: r.enrolledAt,
+    student: r.student,
+    course: r.course,
+    progress: progressOf(r.studentId, r.courseId),
+  })));
+}
+
+module.exports = { enroll, unenroll, myEnrollments, courseProgress, setLessonProgress, courseStudents, teacherStudents };

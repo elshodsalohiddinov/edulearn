@@ -6,9 +6,9 @@ import { ErrorState, PageHeader, PageLoader, StatCard } from '../../components/u
 import { adminApi } from '../../services/coursesApi';
 import { useFetch, useTitle } from '../../hooks/useFetch';
 
-const BRAND = '#5B35E6';
-const GRID = '#ebe8f5';
-const MUTED = '#6b6886';
+const BRAND = '#6236F5';
+const GRID = '#e6e8f2';
+const MUTED = '#64748b';
 
 function ChartTooltip({ active, payload, label, unit }) {
   if (!active || !payload?.length) return null;
@@ -46,6 +46,24 @@ function ChartCard({ title, subtitle, data, labelKey, valueKey, unit, children }
 
 const axisProps = { tickLine: false, axisLine: false, tick: { fill: MUTED, fontSize: 12 } };
 
+// Oylik yozilishlar grafigi — "Umumiy ko'rinish" va "Statistika" sahifalarida ishlatiladi
+export function EnrollmentsChart({ data }) {
+  const s = { enrollmentsByMonth: data };
+  return (
+    <ChartCard title="Yozilishlar (oxirgi 6 oy)" subtitle="Har oyda kurslarga yozilgan talabalar soni" data={s.enrollmentsByMonth} labelKey="month" valueKey="count" unit="ta">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={s.enrollmentsByMonth} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+          <CartesianGrid vertical={false} stroke={GRID} />
+          <XAxis dataKey="month" {...axisProps} />
+          <YAxis allowDecimals={false} {...axisProps} />
+          <Tooltip cursor={{ fill: '#eef0ff' }} content={<ChartTooltip unit="ta yozilish" />} />
+          <Bar dataKey="count" fill={BRAND} radius={[4, 4, 0, 0]} maxBarSize={36} />
+        </BarChart>
+      </ResponsiveContainer>
+    </ChartCard>
+  );
+}
+
 export default function AdminDashboard() {
   useTitle('Admin statistikasi');
   const { data: s, loading, error, reload } = useFetch(() => adminApi.stats(), []);
@@ -54,7 +72,7 @@ export default function AdminDashboard() {
 
   return (
     <div>
-      <PageHeader title="Platforma statistikasi" subtitle="Barcha ko'rsatkichlar ma'lumotlar bazasidan jonli hisoblanadi." />
+      <PageHeader title="Statistika" subtitle="Barcha ko'rsatkichlar ma'lumotlar bazasidan jonli hisoblanadi." />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard icon={Users} label="Talabalar" value={s.users.students} />
         <StatCard icon={UserCog} label="O'qituvchilar" value={s.users.teachers} tone="blue" />
@@ -63,10 +81,10 @@ export default function AdminDashboard() {
       </div>
 
       <div className="mt-4 grid gap-4 sm:grid-cols-3">
-        <Link to="/admin/courses?status=PENDING" className="card flex items-center gap-3 p-4 hover:border-amber-300">
+        <Link to="/admin/courses?status=DRAFT" className="card flex items-center gap-3 p-4 hover:border-amber-300">
           <Clock className="size-5 text-amber-600" aria-hidden="true" />
-          <span className="flex-1">Tekshiruvni kutayotgan kurslar</span>
-          <span className="badge bg-amber-50 text-amber-700">{s.courses.pending}</span>
+          <span className="flex-1">Qoralama kurslar</span>
+          <span className="badge bg-amber-50 text-amber-700">{s.courses.draft}</span>
         </Link>
         <Link to="/admin/messages" className="card flex items-center gap-3 p-4 hover:border-brand-300">
           <Mail className="size-5 text-brand-600" aria-hidden="true" />
@@ -81,25 +99,15 @@ export default function AdminDashboard() {
       </div>
 
       <div className="mt-6 grid gap-4 xl:grid-cols-2">
-        <ChartCard title="Yozilishlar (oxirgi 6 oy)" subtitle="Har oyda kurslarga yozilgan talabalar soni" data={s.enrollmentsByMonth} labelKey="month" valueKey="count" unit="ta">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={s.enrollmentsByMonth} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
-              <CartesianGrid vertical={false} stroke={GRID} />
-              <XAxis dataKey="month" {...axisProps} />
-              <YAxis allowDecimals={false} {...axisProps} />
-              <Tooltip cursor={{ fill: '#f3f0ff' }} content={<ChartTooltip unit="ta yozilish" />} />
-              <Bar dataKey="count" fill={BRAND} radius={[4, 4, 0, 0]} maxBarSize={36} />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartCard>
+        <EnrollmentsChart data={s.enrollmentsByMonth} />
 
         <ChartCard title="Kategoriyalar bo'yicha kurslar" subtitle="Har bir kategoriyadagi kurslar soni (barcha holatlar)" data={s.coursesByCategory} labelKey="name" valueKey="count" unit="ta">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={s.coursesByCategory} layout="vertical" margin={{ top: 0, right: 16, left: 8, bottom: 0 }}>
               <CartesianGrid horizontal={false} stroke={GRID} />
               <XAxis type="number" allowDecimals={false} {...axisProps} />
-              <YAxis type="category" dataKey="name" width={92} {...axisProps} tick={{ fill: '#16142b', fontSize: 13 }} />
-              <Tooltip cursor={{ fill: '#f3f0ff' }} content={<ChartTooltip unit="ta kurs" />} />
+              <YAxis type="category" dataKey="name" width={92} {...axisProps} tick={{ fill: '#0f172a', fontSize: 13 }} />
+              <Tooltip cursor={{ fill: '#eef0ff' }} content={<ChartTooltip unit="ta kurs" />} />
               <Bar dataKey="count" fill={BRAND} radius={[0, 4, 4, 0]} maxBarSize={22} />
             </BarChart>
           </ResponsiveContainer>

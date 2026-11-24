@@ -110,7 +110,7 @@ const courses = [
     ['Future', 'will va going to.'],
     ['Kundalik muloqot', 'Tanishish, yo\'l so\'rash va xarid qilish dialoglari.'],
   ]],
-  ['Biznes va startap asoslari', 'G\'oyani tekshirish, biznes model, moliya va investor bilan ishlash.', 'Biznes', 'ADVANCED', 'PENDING', 'malika@edulearn.uz', [
+  ['Biznes va startap asoslari', 'G\'oyani tekshirish, biznes model, moliya va investor bilan ishlash.', 'Biznes', 'ADVANCED', 'DRAFT', 'malika@edulearn.uz', [
     ['G\'oya va muammo', 'Haqiqiy muammoni topish.'],
     ['Biznes model', 'Lean Canvas to\'ldirish.'],
     ['MVP', 'Minimal mahsulotni tez sinash.'],
@@ -153,7 +153,7 @@ async function main() {
   console.log('Eski ma\'lumotlar o\'chirilmoqda...');
   // TRUNCATE ... RESTART IDENTITY — jadvallarni tozalaydi va ID larni yana 1 dan boshlaydi
   await prisma.$executeRawUnsafe(
-    'TRUNCATE TABLE lesson_progress, enrollments, lessons, courses, categories, contact_messages, users RESTART IDENTITY CASCADE',
+    'TRUNCATE TABLE teacher_requests, lesson_progress, enrollments, lessons, courses, categories, contact_messages, users RESTART IDENTITY CASCADE',
   );
 
   const adminHash = await bcrypt.hash(ADMIN_PASSWORD, 10);
@@ -186,7 +186,9 @@ async function main() {
       data: {
         title,
         slug: slugify(title),
-        description,
+        // Qisqa tavsif — kartada ko'rinadi (birinchi gap); to'liq tavsif — kurs sahifasida
+        shortDescription: `${description.split('. ')[0].replace(/.$/, '')}.`.slice(0, 200),
+        description: `${description} Har bir dars oxirida mustaqil mashq beriladi; barcha darslarni tugatgan talabaning progressi 100% bo'ladi.`,
         level,
         status,
         teacherId: userId[teacherEmail],
@@ -218,6 +220,15 @@ async function main() {
       });
     }
   }
+
+  // Namuna: talaba o'qituvchi bo'lish uchun ariza yuborgan (admin panelda "O'qituvchi so'rovlari")
+  await prisma.teacherRequest.create({
+    data: {
+      userId: userId['sevara@edulearn.uz'],
+      expertise: 'Ingliz tili va IELTS',
+      experience: "IELTS 7.5 sertifikatim bor, 2 yildan beri o'quv markazida yordamchi o'qituvchi bo'lib ishlayman.",
+    },
+  });
 
   await prisma.contactMessage.create({
     data: { name: 'Bekzod', email: 'bekzod@example.com', subject: 'Sertifikat haqida', message: 'Kurs yakunida sertifikat beriladimi? Rahmat.' },

@@ -1,14 +1,17 @@
 // Kurs kartasi va muqovasi (rasm bo'lmasa — kategoriya rangidagi gradient va ikon)
+import { useState } from 'react';
 import { Link } from 'react-router';
 import { BookOpen, CheckCircle2, PlayCircle, Signal, Users } from 'lucide-react';
 import { LEVELS, categoryStyle, cn, fullName } from '../utils/format';
 import { Avatar } from './ui';
 
+// Muqova: rasm bo'lsa 16:9 kesib ko'rsatiladi, bo'lmasa yoki yuklanmasa — kategoriya rangidagi zaxira muqova
 export function CourseThumb({ course, className = 'h-40', iconSize = 'size-16' }) {
+  const [broken, setBroken] = useState(false);
   const style = categoryStyle(course?.category?.slug);
   const Icon = style.icon;
-  if (course?.thumbnailUrl) {
-    return <img src={course.thumbnailUrl} alt="" loading="lazy" className={cn('w-full object-cover', className)} />;
+  if (course?.thumbnailUrl && !broken) {
+    return <img src={course.thumbnailUrl} alt="" loading="lazy" onError={() => setBroken(true)} className={cn('w-full object-cover', className)} />;
   }
   return (
     <div className={cn('relative grid place-items-center overflow-hidden bg-gradient-to-br', style.gradient, className)} aria-hidden="true">
@@ -27,7 +30,7 @@ export default function CourseCard({ course }) {
       className="card group flex flex-col overflow-hidden transition hover:-translate-y-1 hover:shadow-pop focus-visible:-translate-y-1"
     >
       <div className="relative">
-        <CourseThumb course={course} />
+        <CourseThumb course={course} className="aspect-video" />
         <span className="badge absolute left-3 top-3 bg-emerald-50 text-emerald-700">Bepul</span>
         <span className="absolute bottom-3 right-3 grid size-8 place-items-center rounded-full bg-white/90 text-ink">
           <PlayCircle className="size-4" aria-hidden="true" />
@@ -37,7 +40,7 @@ export default function CourseCard({ course }) {
         <div>
           <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-brand-600">{course.category?.name}</p>
           <h3 className="line-clamp-2 text-[17px] font-bold leading-snug group-hover:text-brand-700">{course.title}</h3>
-          <p className="mt-1.5 line-clamp-2 text-sm text-muted">{course.description}</p>
+          <p className="mt-1.5 line-clamp-2 min-h-10 text-sm text-muted">{course.shortDescription}</p>
         </div>
         <div className="flex items-center gap-2 text-sm">
           <Avatar user={course.teacher} size="size-7 text-[11px]" />

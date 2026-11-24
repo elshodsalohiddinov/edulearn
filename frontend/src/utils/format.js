@@ -5,7 +5,7 @@ export const LEVELS = { BEGINNER: 'Boshlang\'ich', INTERMEDIATE: 'O\'rta', ADVAN
 export const ROLES = { STUDENT: 'Talaba', TEACHER: 'O\'qituvchi', SUPER_ADMIN: 'Super admin' };
 export const STATUSES = {
   DRAFT: { label: 'Qoralama', cls: 'bg-slate-100 text-slate-600' },
-  PENDING: { label: 'Tekshiruvda', cls: 'bg-amber-50 text-amber-700' },
+  PENDING: { label: 'Kutilmoqda', cls: 'bg-amber-50 text-amber-700' },
   PUBLISHED: { label: 'Nashr qilingan', cls: 'bg-emerald-50 text-emerald-700' },
   ARCHIVED: { label: 'Yashirilgan', cls: 'bg-red-50 text-red-600' },
 };

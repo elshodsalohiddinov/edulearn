@@ -54,18 +54,22 @@ const courseQuery = z.object({
   ...pagination,
 });
 
+// O'qituvchi faqat "qoralama" (DRAFT) yoki "nashr" (PUBLISHED) ni tanlaydi.
+// ARCHIVED (yashirish) — faqat admin uchun (/admin/courses/:id/status).
+const TEACHER_STATUSES = ['DRAFT', 'PUBLISHED'];
+
 const courseCreate = z.object({
   title: text(3, 150, 'Kurs nomi'),
-  description: text(10, 5000, 'Tavsif'),
+  shortDescription: text(10, 200, 'Qisqa tavsif'),
+  description: text(10, 5000, 'To\'liq tavsif'),
   categoryId: z.coerce.number({ message: 'Kategoriyani tanlang' }).int().positive({ message: 'Kategoriyani tanlang' }),
   level: z.enum(LEVELS, { message: 'Darajani tanlang' }).default('BEGINNER'),
   thumbnailUrl: optionalUrl,
-  // O'qituvchi faqat qoralama (DRAFT) yoki tekshiruvga yuborish (PENDING) ni tanlay oladi
-  status: z.enum(['DRAFT', 'PENDING'], { message: 'Holat noto\'g\'ri' }).default('DRAFT'),
+  status: z.enum(TEACHER_STATUSES, { message: 'Holat: qoralama yoki nashr' }).default('DRAFT'),
 });
 
 const courseUpdate = courseCreate.partial().extend({
-  status: z.enum(['DRAFT', 'PENDING'], { message: 'O\'qituvchi faqat qoralama yoki tekshiruvga yuborishni tanlay oladi' }).optional(),
+  status: z.enum(TEACHER_STATUSES, { message: 'Holat: qoralama yoki nashr' }).optional(),
 });
 
 const courseIdOrSlug = z.object({ idOrSlug: z.string().trim().min(1).max(100) });
@@ -106,6 +110,14 @@ const adminCourseQuery = z.object({
 });
 const courseStatus = z.object({ status: z.enum(STATUSES, { message: 'Holat noto\'g\'ri' }) });
 
+// ---------- O'qituvchi bo'lish arizasi ----------
+const teacherRequest = z.object({
+  expertise: text(3, 100, 'Mutaxassislik'),
+  experience: text(20, 2000, 'Tajriba haqida'),
+});
+const requestQuery = z.object({ status: z.enum(['PENDING', 'APPROVED', 'REJECTED']).optional(), ...pagination });
+const requestDecision = z.object({ status: z.enum(['APPROVED', 'REJECTED'], { message: 'APPROVED yoki REJECTED' }) });
+
 // ---------- Bog'lanish ----------
 const contact = z.object({
   name: text(2, 80, 'Ism'),
@@ -121,5 +133,6 @@ module.exports = {
   courseQuery, courseCreate, courseUpdate, courseIdOrSlug, courseIdParam,
   lessonCreate, lessonUpdate, lessonIdParam, lessonOrder, progress, pageQuery,
   userQuery, roleUpdate, statusUpdate, adminCourseQuery, courseStatus,
+  teacherRequest, requestQuery, requestDecision,
   contact,
 };

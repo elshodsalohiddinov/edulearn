@@ -3,11 +3,11 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import toast from 'react-hot-toast';
 import {
-  ArrowLeft, BookOpen, CheckCircle2, Clock, Eye, Lock, LogIn, PlayCircle, Settings, Signal, Users,
+  BookOpen, CheckCircle2, Clock, Eye, Lock, LogIn, PlayCircle, Settings, Signal, Users,
 } from 'lucide-react';
 import { CourseThumb } from '../../components/CourseCard';
 import { Modal, useConfirm } from '../../components/Modal';
-import { Avatar, ErrorState, PageLoader, ProgressBar, StatusBadge } from '../../components/ui';
+import { Avatar, Breadcrumbs, ErrorState, PageLoader, ProgressBar, StatusBadge } from '../../components/ui';
 import { coursesApi, enrollmentApi, lessonsApi } from '../../services/coursesApi';
 import { useFetch, useTitle } from '../../hooks/useFetch';
 import { useAuth } from '../../contexts/AuthContext';
@@ -85,12 +85,10 @@ export default function CourseDetail() {
 
   return (
     <div className="container-page pt-8">
-      <button type="button" onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/courses'))} className="mb-5 inline-flex items-center gap-1.5 font-medium text-muted hover:text-brand-700">
-        <ArrowLeft className="size-4" /> Orqaga
-      </button>
+      <Breadcrumbs items={[["Bosh sahifa", "/"], ["Kurslar", "/courses"], [c.category.name, `/courses?category=${c.category.slug}`], [c.title]]} />
 
       <section className="card grid gap-6 overflow-hidden p-5 md:grid-cols-[320px_1fr] md:p-6">
-        <CourseThumb course={c} className="h-52 rounded-xl md:h-full md:min-h-56" iconSize="size-20" />
+        <CourseThumb course={c} className="aspect-video rounded-xl md:self-start" iconSize="size-20" />
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <Link to={`/courses?category=${c.category.slug}`} className="badge bg-brand-50 text-brand-700 hover:bg-brand-100">{c.category.name}</Link>

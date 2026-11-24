@@ -1,10 +1,11 @@
 // Bosh sahifa (landing): hero, qidiruv, kategoriyalar, mashhur kurslar, raqamlar, o'qituvchilar, afzalliklar.
 import { Link, useNavigate } from 'react-router';
 import {
-  ArrowRight, Award, BarChart3, BookOpen, CalendarClock, Code2, Infinity as InfinityIcon, LogIn, PlayCircle, Search,
+  ArrowRight, Award, BarChart3, BookOpen, CalendarClock, HelpCircle, Infinity as InfinityIcon, LogIn, PlayCircle, Search,
   Sparkles, UserPlus, Users,
 } from 'lucide-react';
 import CourseCard from '../../components/CourseCard';
+import HeroIllustration from '../../components/HeroIllustration';
 import { Avatar, ErrorState, SkeletonGrid } from '../../components/ui';
 import { categoriesApi, coursesApi, publicApi } from '../../services/coursesApi';
 import { useFetch, useTitle } from '../../hooks/useFetch';
@@ -19,34 +20,6 @@ function SectionHead({ icon: Icon, title, subtitle, link }) {
         {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
       </div>
       {link}
-    </div>
-  );
-}
-
-function HeroArt() {
-  return (
-    <div className="relative mx-auto h-80 w-full max-w-lg sm:h-96" aria-hidden="true">
-      <div className="absolute inset-x-6 bottom-0 top-6 rounded-[48%_52%_40%_60%/55%_45%_55%_45%] bg-gradient-to-br from-brand-200 via-brand-400 to-brand-600" />
-      <div className="absolute inset-x-[18%] bottom-10">
-        <div className="flex h-44 flex-col gap-2.5 rounded-t-2xl border-8 border-[#2a2660] bg-[#1e1b4b] p-5 sm:h-52">
-          <i className="h-2.5 rounded bg-brand-400" />
-          <i className="h-2.5 w-2/3 rounded bg-pink-400" />
-          <i className="h-2.5 w-4/5 rounded bg-sky-400" />
-          <i className="h-2.5 w-1/2 rounded bg-violet-300" />
-          <i className="h-2.5 w-3/4 rounded bg-emerald-400" />
-        </div>
-        <div className="-mx-6 h-3.5 rounded-b-2xl bg-[#d7d2ee]" />
-      </div>
-      {[
-        ['left-0 top-6', Code2, 'Dasturlash', 'amaliy darslar', 'bg-brand-50 text-brand-600'],
-        ['right-0 top-16', BarChart3, 'Progress', 'har bir dars', 'bg-pink-50 text-pink-600'],
-        ['bottom-2 left-2', Award, 'Yakunlash', 'kurs oxirida', 'bg-emerald-50 text-emerald-600'],
-      ].map(([pos, Icon, t, s, c]) => (
-        <div key={t} className={`absolute ${pos} flex items-center gap-2.5 rounded-2xl bg-white px-3.5 py-2.5 shadow-pop`}>
-          <span className={`grid size-9 place-items-center rounded-xl ${c}`}><Icon className="size-5" /></span>
-          <span className="text-sm font-semibold leading-tight">{t}<span className="block text-xs font-normal text-muted">{s}</span></span>
-        </div>
-      ))}
     </div>
   );
 }
@@ -75,20 +48,19 @@ export default function Home() {
             <span className="inline-flex items-center gap-2 rounded-full bg-brand-50 px-3.5 py-1.5 text-sm font-medium text-brand-700">
               <Sparkles className="size-4" aria-hidden="true" /> Zamonaviy onlayn ta'lim platformasi
             </span>
-            <h1 className="mt-5 text-4xl font-extrabold leading-[1.1] sm:text-5xl lg:text-[54px]">
-              Onlayn ta'lim bilan bilim va karyerangizni <span className="text-brand-600">keyingi bosqichga</span> olib chiqing!
+            <h1 className="mt-5 text-4xl font-extrabold leading-[1.1] sm:text-5xl lg:text-[58px]">
+              Bilim oling. <span className="text-brand-600">Kelajagingizni</span> yarating.
             </h1>
-            <p className="mt-5 max-w-xl text-lg text-ink/70">
-              Sifatli kurslar, tajribali o'qituvchilar va amaliy darslar orqali yangi ko'nikmalarni o'rganing va progressingizni kuzating.
+            <p className="mt-5 max-w-xl text-lg text-muted">
+              Dasturlash, dizayn, marketing va boshqa yo'nalishlarda o'zingizga mos kursni toping.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link to="/courses" className="btn btn-primary btn-lg"><PlayCircle /> Kurslarni ko'rish</Link>
-              {user
-                ? <Link to={homePath} className="btn btn-outline btn-lg">Mening panelim</Link>
-                : <Link to="/register" className="btn btn-outline btn-lg"><UserPlus /> Bepul ro'yxatdan o'tish</Link>}
+              <a href="#qanday-ishlaydi" className="btn btn-outline btn-lg"><HelpCircle /> Qanday ishlaydi?</a>
+              {user && <Link to={homePath} className="btn btn-ghost btn-lg">Mening panelim</Link>}
             </div>
           </div>
-          <HeroArt />
+          <HeroIllustration />
         </div>
 
         <div className="container-page relative z-10 mt-10 pb-2">
@@ -96,7 +68,7 @@ export default function Home() {
             <label className="relative">
               <span className="sr-only">Kurslarni qidirish</span>
               <Search className="pointer-events-none absolute left-3.5 top-1/2 size-5 -translate-y-1/2 text-muted" aria-hidden="true" />
-              <input name="search" className="input pl-11" placeholder="Kurslarni qidiring... (masalan: Python, Figma)" />
+              <input name="search" className="input pl-11" placeholder="Qaysi kursni qidiryapsiz?" />
             </label>
             <label>
               <span className="sr-only">Kategoriya</span>
@@ -131,6 +103,24 @@ export default function Home() {
             {popular.data.map((c) => <CourseCard key={c.id} course={c} />)}
           </div>
         )}
+      </section>
+
+      <section id="qanday-ishlaydi" className="container-page mt-16 scroll-mt-24">
+        <SectionHead icon={HelpCircle} title="Qanday ishlaydi?" subtitle="Uch qadamda o'qishni boshlang" />
+        <ol className="grid gap-4 md:grid-cols-3">
+          {[
+            [UserPlus, "Akkaunt oching", "Bepul ro'yxatdan o'ting — bir daqiqa vaqt oladi. Hisobingiz talaba sifatida ochiladi."],
+            [Search, "Kursni tanlang", "Katalogdan yo'nalish va daraja bo'yicha o'zingizga mos kursni toping va yoziling."],
+            [PlayCircle, "Darsni boshlang", "Darslarni o'qing, «Tugallandi» deb belgilang va progressingiz foizda o'sib borishini kuzating."],
+          ].map(([Icon, t, d], i) => (
+            <li key={t} className="card relative p-6">
+              <span className="absolute right-5 top-4 text-5xl font-extrabold text-brand-50" aria-hidden="true">{i + 1}</span>
+              <span className="grid size-12 place-items-center rounded-xl bg-brand-600 text-white"><Icon className="size-6" aria-hidden="true" /></span>
+              <h3 className="mt-4 text-lg font-bold">{i + 1}. {t}</h3>
+              <p className="mt-1.5 text-muted">{d}</p>
+            </li>
+          ))}
+        </ol>
       </section>
 
       <section className="container-page mt-16 grid gap-10 lg:grid-cols-[1.2fr_1fr]">

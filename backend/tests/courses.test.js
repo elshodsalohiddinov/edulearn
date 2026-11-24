@@ -56,7 +56,7 @@ describe('Kurslar katalogi', () => {
   });
 
   it('DRAFT kurs mehmonga 404, egasiga 200', async () => {
-    const draft = await prisma.course.findFirst({ where: { status: 'DRAFT' } });
+    const draft = await prisma.course.findFirst({ where: { status: 'DRAFT', teacher: { email: 'sardor@edulearn.uz' } } });
     expect((await guest().get(`${API}/courses/${draft.slug}`)).status).toBe(404);
     const t = await asTeacher();
     expect((await t.get(`${API}/courses/${draft.slug}`)).status).toBe(200);
@@ -64,20 +64,33 @@ describe('Kurslar katalogi', () => {
 });
 
 describe('Kurs CRUD va egalik (ownership)', () => {
-  it('o\'qituvchi o\'z kursini yaratadi, yangilaydi, o\'chiradi', async () => {
+  it('o\'qituvchi o\'z kursini yaratadi, yangilaydi, nashr qiladi, o\'chiradi', async () => {
     const t = await asTeacher();
-    const c = await t.post(`${API}/courses`).send({ title: 'Test kursi', description: 'Bu test uchun kurs tavsifi', categoryId });
+    const c = await t.post(`${API}/courses`).send({ title: 'Test kursi', shortDescription: 'Qisqa test tavsifi', description: 'Bu test uchun kurs tavsifi', categoryId });
     expect(c.status).toBe(201);
     expect(c.body.data.status).toBe('DRAFT');
+    expect(c.body.data.shortDescription).toBe('Qisqa test tavsifi');
     const { id } = c.body.data;
 
-    const u = await t.patch(`${API}/courses/${id}`).send({ title: 'Test kursi 2', status: 'PENDING' });
+    const u = await t.patch(`${API}/courses/${id}`).send({ title: 'Test kursi 2' });
     expect(u.status).toBe(200);
-    expect(u.body.data.status).toBe('PENDING');
     expect(u.body.data.slug).toBe('test-kursi-2');
 
-    // O'qituvchi o'zi PUBLISHED qila olmaydi
+    // Darssiz kursni nashr qilib bo'lmaydi
     expect((await t.patch(`${API}/courses/${id}`).send({ status: 'PUBLISHED' })).status).toBe(422);
+    // O'qituvchi ARCHIVED (yashirish) holatini qo'ya olmaydi — bu faqat admin uchun
+    expect((await t.patch(`${API}/courses/${id}`).send({ status: 'ARCHIVED' })).status).toBe(422);
+
+    const lesson = await t.post(`${API}/courses/${id}/lessons`).send({ title: 'Birinchi dars', content: 'Matn' });
+    const pub = await t.patch(`${API}/courses/${id}`).send({ status: 'PUBLISHED' });
+    expect(pub.status).toBe(200);
+    expect(pub.body.data.status).toBe('PUBLISHED');
+    expect((await guest().get(`${API}/courses/${id}`)).status).toBe(200);
+
+    // Oxirgi dars o'chirilsa kurs qoralamaga qaytadi
+    await t.delete(`${API}/lessons/${lesson.body.data.id}`);
+    expect((await guest().get(`${API}/courses/${id}`)).status).toBe(404);
+
     expect((await t.delete(`${API}/courses/${id}`)).status).toBe(204);
   });
 
@@ -89,20 +102,23 @@ describe('Kurs CRUD va egalik (ownership)', () => {
     expect((await other.post(`${API}/courses/${course.id}/lessons`).send({ title: 'Begona dars', content: 'x' })).status).toBe(403);
   });
 
-  it('admin kursni tasdiqlaydi (PUBLISHED) va yashiradi (ARCHIVED)', async () => {
+  it('admin kursni yashiradi (ARCHIVED) — o\'qituvchi uni o\'zi qayta ocholmaydi', async () => {
     const a = await asAdmin();
-    const pending = await prisma.course.findFirst({ where: { status: 'PENDING' } });
-    expect((await a.patch(`${API}/admin/courses/${pending.id}/status`).send({ status: 'PUBLISHED' })).body.data.status).toBe('PUBLISHED');
-    expect((await guest().get(`${API}/courses/${pending.slug}`)).status).toBe(200);
-    await a.patch(`${API}/admin/courses/${pending.id}/status`).send({ status: 'ARCHIVED' });
-    expect((await guest().get(`${API}/courses/${pending.slug}`)).status).toBe(404);
-    await a.patch(`${API}/admin/courses/${pending.id}/status`).send({ status: 'PENDING' });
+    const t = await asTeacher();
+    const course = await prisma.course.findFirst({ where: { slug: 'git-va-github' } });
+    expect((await a.patch(`${API}/admin/courses/${course.id}/status`).send({ status: 'ARCHIVED' })).body.data.status).toBe('ARCHIVED');
+    expect((await guest().get(`${API}/courses/${course.slug}`)).status).toBe(404);
+    expect((await t.patch(`${API}/courses/${course.id}`).send({ status: 'PUBLISHED' })).status).toBe(403);
+    expect((await a.patch(`${API}/admin/courses/${course.id}/status`).send({ status: 'PUBLISHED' })).body.data.status).toBe('PUBLISHED');
+    expect((await guest().get(`${API}/courses/${course.slug}`)).status).toBe(200);
   });
 
-  it('validatsiya: bo\'sh sarlavha va mavjud bo\'lmagan kategoriya -> 422', async () => {
+  it('validatsiya: bo\'sh sarlavha, qisqa tavsif yo\'q, mavjud bo\'lmagan kategoriya -> 422', async () => {
     const t = await asTeacher();
-    expect((await t.post(`${API}/courses`).send({ title: '  ', description: 'Tavsif tavsif', categoryId })).status).toBe(422);
-    expect((await t.post(`${API}/courses`).send({ title: 'Kurs', description: 'Tavsif tavsif', categoryId: 99999 })).status).toBe(422);
+    const base = { title: 'Kurs', shortDescription: 'Qisqa tavsif matni', description: 'Tavsif tavsif', categoryId };
+    expect((await t.post(`${API}/courses`).send({ ...base, title: '  ' })).status).toBe(422);
+    expect((await t.post(`${API}/courses`).send({ ...base, shortDescription: undefined })).status).toBe(422);
+    expect((await t.post(`${API}/courses`).send({ ...base, categoryId: 99999 })).status).toBe(422);
   });
 });
 
@@ -165,7 +181,7 @@ describe('Yozilish va progress', () => {
     const t = await asTeacher();
     const a = await asAdmin();
     const s = await asStudent2();
-    const c = (await t.post(`${API}/courses`).send({ title: 'Bo\'sh kurs', description: 'Darsi yo\'q kurs tavsifi', categoryId })).body.data;
+    const c = (await t.post(`${API}/courses`).send({ title: 'Bo\'sh kurs', shortDescription: 'Darsi yo\'q kurs', description: 'Darsi yo\'q kurs tavsifi', categoryId })).body.data;
     await a.patch(`${API}/admin/courses/${c.id}/status`).send({ status: 'PUBLISHED' });
     await s.post(`${API}/courses/${c.id}/enroll`);
     const p = await s.get(`${API}/courses/${c.id}/progress`);

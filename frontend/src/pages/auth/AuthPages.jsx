@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
-import { BarChart3, BookOpen, KeyRound, LogIn, MonitorPlay, UserPlus } from 'lucide-react';
+import { BarChart3, BookOpen, LogIn, MonitorPlay, UserPlus } from 'lucide-react';
 import Logo from '../../components/Logo';
 import { PasswordField, TextField, applyServerErrors } from '../../components/FormField';
 import { HOME_BY_ROLE, useAuth } from '../../contexts/AuthContext';
@@ -78,14 +78,11 @@ export function Login() {
         {errors.root && <div className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">{errors.root.message}</div>}
         <TextField label="Email" type="email" autoComplete="email" placeholder="siz@gmail.com" {...register('email')} error={errors.email?.message} />
         <PasswordField autoComplete="current-password" placeholder="••••••••" {...register('password')} error={errors.password?.message} />
-        <div className="-mt-2 mb-5 text-right">
-          <Link to="/forgot-password" className="text-sm font-medium text-brand-700 hover:underline">Parolni unutdingizmi?</Link>
-        </div>
         <button type="submit" className="btn btn-primary btn-lg w-full" disabled={isSubmitting}>
           <LogIn /> {isSubmitting ? 'Tekshirilmoqda...' : 'Kirish'}
         </button>
         <p className="mt-6 text-center text-sm text-muted">
-          Hisobingiz yo'qmi? <Link to="/register" className="font-semibold text-brand-700 hover:underline">Ro'yxatdan o'ting</Link>
+          Hisobingiz yo'qmi? <Link to="/register" state={location.state} className="font-semibold text-brand-700 hover:underline">Ro'yxatdan o'ting</Link>
         </p>
       </form>
     </AuthShell>
@@ -109,13 +106,15 @@ export function Register() {
   useTitle('Ro\'yxatdan o\'tish');
   const { register: signUp } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { register, handleSubmit, setError, formState: { errors, isSubmitting } } = useForm({ resolver: zodResolver(registerSchema) });
 
   const onSubmit = async (values) => {
     try {
       const user = await signUp(values);
       toast.success('Hisob yaratildi! Xush kelibsiz.');
-      navigate(HOME_BY_ROLE[user.role], { replace: true });
+      // Kursga yozilmoqchi bo'lib kelgan bo'lsa — o'sha kursga qaytaramiz
+      navigate(targetAfterLogin(user, location.state?.from), { replace: true });
     } catch (e) {
       applyServerErrors(e, setError);
       if (!e.errors?.length) setError('root', { message: e.message });
@@ -124,7 +123,7 @@ export function Register() {
   };
 
   return (
-    <AuthShell title="Ro'yxatdan o'tish" subtitle="Bir daqiqada talaba hisobini oching va o'qishni boshlang.">
+    <AuthShell title="EduLearn'da akkaunt yarating" subtitle="Bir daqiqada akkaunt oching va o'qishni boshlang.">
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
         {errors.root && <div className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">{errors.root.message}</div>}
         <div className="grid gap-x-4 sm:grid-cols-2">
@@ -135,30 +134,13 @@ export function Register() {
         <PasswordField autoComplete="new-password" hint="Kamida 8 ta belgi, harf va raqam" {...register('password')} error={errors.password?.message} />
         <PasswordField label="Parolni tasdiqlang" autoComplete="new-password" {...register('confirmPassword')} error={errors.confirmPassword?.message} />
         <button type="submit" className="btn btn-primary btn-lg mt-1 w-full" disabled={isSubmitting}>
-          <UserPlus /> {isSubmitting ? 'Yaratilmoqda...' : 'Hisob yaratish'}
+          <UserPlus /> {isSubmitting ? 'Yaratilmoqda...' : 'Akkaunt yaratish'}
         </button>
         <p className="mt-6 text-center text-sm text-muted">
-          Hisobingiz bormi? <Link to="/login" className="font-semibold text-brand-700 hover:underline">Kirish</Link>
+          Akkauntingiz bormi? <Link to="/login" state={location.state} className="font-semibold text-brand-700 hover:underline">Kirish</Link>
         </p>
-        <p className="mt-3 text-center text-xs text-muted">O'qituvchi bo'lmoqchimisiz? Ro'yxatdan o'ting va administratorga murojaat qiling.</p>
+        <p className="mt-3 text-center text-xs text-muted">O'qituvchi bo'lmoqchimisiz? Akkaunt ochgach, Profil sahifasidan ariza yuboring.</p>
       </form>
-    </AuthShell>
-  );
-}
-
-// Email servisi ulanmagan — shuning uchun "xat yuborildi" deb yolg'on ko'rsatmaymiz.
-export function ForgotPassword() {
-  useTitle('Parolni tiklash');
-  return (
-    <AuthShell title="Parolni tiklash" subtitle="Parolni email orqali tiklash keyingi bosqichda qo'shiladi.">
-      <div className="card flex gap-4 p-5">
-        <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-amber-50 text-amber-600"><KeyRound className="size-5" /></span>
-        <p className="text-ink/80">
-          Hozircha email servisi sozlanmagan. Parolingizni unutgan bo'lsangiz, <Link to="/contact" className="font-semibold text-brand-700 hover:underline">Bog'lanish</Link> sahifasi orqali
-          administratorga yozing. Tizimga kira olsangiz, parolni Profil sahifasida o'zgartirishingiz mumkin.
-        </p>
-      </div>
-      <Link to="/login" className="btn btn-outline mt-6 w-full">Kirish sahifasiga qaytish</Link>
     </AuthShell>
   );
 }

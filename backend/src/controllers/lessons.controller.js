@@ -64,8 +64,12 @@ async function update(req, res) {
 // DELETE /api/v1/lessons/:lessonId
 async function remove(req, res) {
   const { lessonId } = req.valid.params;
-  await findManageableLesson(req.user, lessonId);
+  const lesson = await findManageableLesson(req.user, lessonId);
   await prisma.lesson.delete({ where: { id: lessonId } });
+  // Nashr qilingan kursda dars qolmasa — u qoralamaga qaytadi (darssiz kurs katalogda ko'rinmasin)
+  if ((await prisma.lesson.count({ where: { courseId: lesson.courseId } })) === 0) {
+    await prisma.course.updateMany({ where: { id: lesson.courseId, status: 'PUBLISHED' }, data: { status: 'DRAFT' } });
+  }
   res.status(204).end();
 }
 

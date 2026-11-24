@@ -28,8 +28,8 @@ enum CourseLevel {
   ADVANCED
 }
 
-// DRAFT -> (o'qituvchi yuboradi) PENDING -> (admin tasdiqlaydi) PUBLISHED
-// Admin istalgan vaqtda ARCHIVED (yashirilgan) qila oladi.
+// DRAFT (qoralama) -> PUBLISHED (o'qituvchi nashr qiladi, kamida 1 dars bo'lishi shart)
+// ARCHIVED — admin yashirgan kurs. PENDING — eski "tekshiruvga yuborish" holati (zaxira).
 enum CourseStatus {
   DRAFT
   PENDING
@@ -51,9 +51,10 @@ model User {
   updatedAt    DateTime @updatedAt
 
   // O'qituvchi kurslari. Kursi bor o'qituvchini o'chirib bo'lmaydi (Restrict).
-  courses     Course[]         @relation("TeacherCourses")
-  enrollments Enrollment[]
-  progress    LessonProgress[]
+  courses         Course[]         @relation("TeacherCourses")
+  enrollments     Enrollment[]
+  progress        LessonProgress[]
+  teacherRequests TeacherRequest[]
 
   @@index([role])
   @@map("users")
@@ -71,17 +72,18 @@ model Category {
 }
 
 model Course {
-  id           Int          @id @default(autoincrement())
-  title        String       @db.VarChar(150)
-  slug         String       @unique @db.VarChar(100)
-  description  String
-  thumbnailUrl String?
-  level        CourseLevel  @default(BEGINNER)
-  status       CourseStatus @default(DRAFT)
-  teacherId    Int
-  categoryId   Int
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  id               Int          @id @default(autoincrement())
+  title            String       @db.VarChar(150)
+  slug             String       @unique @db.VarChar(100)
+  shortDescription String       @default("") @db.VarChar(200)
+  description      String
+  thumbnailUrl     String?
+  level            CourseLevel  @default(BEGINNER)
+  status           CourseStatus @default(DRAFT)
+  teacherId        Int
+  categoryId       Int
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
 
   teacher     User         @relation("TeacherCourses", fields: [teacherId], references: [id], onDelete: Restrict)
   // Kurslari bor kategoriyani o'chirib bo'lmaydi — avval kurslarni boshqa kategoriyaga o'tkazish kerak.
@@ -157,4 +159,28 @@ model ContactMessage {
   createdAt DateTime @default(now())
 
   @@map("contact_messages")
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// "O'qituvchi bo'lish uchun ariza": talaba yuboradi, super admin qabul qiladi yoki rad etadi.
+// Qabul qilinsa users.role = TEACHER bo'ladi.
+model TeacherRequest {
+  id         Int           @id @default(autoincrement())
+  userId     Int
+  expertise  String        @db.VarChar(100)
+  experience String
+  status     RequestStatus @default(PENDING)
+  createdAt  DateTime      @default(now())
+  reviewedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([userId])
+  @@map("teacher_requests")
 }
