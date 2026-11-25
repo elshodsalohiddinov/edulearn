@@ -288,7 +288,9 @@ Har bir yozuv bir qatordan iborat bo'lsin. AI kodida topilgan xatoni tuzatgan co
 
 | A'zo | GitHub | Rol |
 |---|---|---|
-| _Ism Familiya_ | @username | Team lead |
-| _Ism Familiya_ | @username | Backend dasturchi |
+| Elshod Salohiddinov | [@elshodsalohiddinov](https://github.com/elshodsalohiddinov) | Team lead |
+| _Ism Familiya_ | [@sarvaranuraliyeva](https://github.com/sarvaranuraliyeva) | Backend dasturchi |
 | _Ism Familiya_ | @username | Ma'lumotlar bazasi |
 | _Ism Familiya_ | @username | Frontend dasturchi |
+
+Yangi a'zo uchun yo'riqnoma: [docs/YANGI_AZO.md](docs/YANGI_AZO.md).
