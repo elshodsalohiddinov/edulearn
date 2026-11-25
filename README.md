@@ -18,7 +18,7 @@ Login sahifasida rol tanlash yo'q. Hamma bitta forma orqali email va parol bilan
 | Frontend | React 19, Vite, Tailwind CSS 4, React Router, Axios, React Hook Form + Zod, Recharts, lucide-react, react-hot-toast |
 | Backend | Node.js, Express 5, Prisma ORM 7, Zod, JWT (HttpOnly cookie), bcryptjs, helmet, cors, express-rate-limit |
 | Ma'lumotlar bazasi | PostgreSQL. Lokalda `embedded-postgres` orqali ishlaydi, o'rnatish shart emas |
-| Testlar | Vitest + Supertest (backend, 35 ta), Vitest + React Testing Library (frontend) |
+| Testlar | Vitest + Supertest (backend, 39 ta), Vitest + React Testing Library (frontend) |
 
 ## Ishga tushirish
 
@@ -68,8 +68,10 @@ Seed skripti quyidagi akkauntlarni yaratadi. Parollar `backend/.env` dagi `SEED_
 | Yopiq dars matnini o'qish | — | yozilgan kursida | o'z kursida | ✅ |
 | Kurs yaratish | — | — | ✅ | — |
 | Kursni tahrirlash/o'chirish, dars qo'shish/tartiblash | — | — | faqat o'ziniki | ✅ |
-| Kursni tekshiruvga yuborish (DRAFT → PENDING) | — | — | ✅ | — |
-| Kursni tasdiqlash / yashirish (PUBLISHED / ARCHIVED) | — | — | — | ✅ |
+| Kursni nashr qilish / qoralamaga qaytarish (kamida 1 dars bo'lsa) | — | — | faqat o'ziniki | ✅ |
+| Kursni yashirish (ARCHIVED) | — | — | — | ✅ |
+| O'qituvchi bo'lish uchun ariza yuborish | — | ✅ | — | — |
+| Arizani qabul qilish / rad etish | — | — | — | ✅ |
 | Kurs talabalari va ularning progressi | — | — | o'z kursida | ✅ |
 | Kategoriyalar CRUD | — | — | — | ✅ |
 | Foydalanuvchilar: rol berish, bloklash | — | — | — | ✅ |
@@ -144,8 +146,8 @@ Prefiks: `/api/v1`. Autentifikatsiya **HttpOnly cookie** orqali ishlaydi: login 
 | **Kurslar (CRUD)** ||||
 | GET | `/courses?search=&category=&level=&sort=newest\|popular\|title\|oldest&page=&limit=` | hamma | faqat PUBLISHED, sahifalangan |
 | GET | `/courses/:idOrSlug` | hamma | kurs + syllabus + `viewer` (isEnrolled, canManage, progress) |
-| POST | `/courses` | o'qituvchi | yangi kurs (DRAFT yoki PENDING) |
-| PATCH / DELETE | `/courses/:id` | egasi, admin | o'qituvchi faqat DRAFT/PENDING holatini qo'ya oladi |
+| POST | `/courses` | o'qituvchi | `{title, shortDescription, description, categoryId, level, thumbnailUrl?}` → DRAFT |
+| PATCH / DELETE | `/courses/:id` | egasi, admin | `status`: DRAFT yoki PUBLISHED; darssiz kurs nashr qilinmaydi (422), admin yashirgan kursni o'qituvchi ocholmaydi (403) |
 | **Darslar** ||||
 | GET | `/courses/:courseId/lessons` | hamma | yopiq darslar uchun `content: null, locked: true` |
 | POST | `/courses/:courseId/lessons` | egasi, admin | yangi dars |
@@ -159,8 +161,14 @@ Prefiks: `/api/v1`. Autentifikatsiya **HttpOnly cookie** orqali ishlaydi: login 
 | **O'qituvchi** ||||
 | GET | `/teacher/courses` | o'qituvchi | o'z kurslari (barcha holatlar) |
 | GET | `/teacher/courses/:courseId/students` | egasi, admin | yozilgan talabalar va progress |
+| GET | `/teacher/students` | o'qituvchi | barcha kurslarimdagi talabalar (kurs, progress, sana) |
+| **O'qituvchi bo'lish arizasi** ||||
+| POST | `/teacher-requests` | talaba | `{expertise, experience}` → 201; ko'rib chiqilayotgan ariza bo'lsa 409 |
+| GET | `/teacher-requests/my` | talaba | o'z arizalari va holati |
+| GET | `/admin/teacher-requests?status=PENDING` | admin | arizalar ro'yxati |
+| PATCH | `/admin/teacher-requests/:id` | admin | `{status: "APPROVED"\|"REJECTED"}` — qabul qilinsa rol TEACHER bo'ladi; qayta qaror 409 |
 | **Admin** ||||
-| GET | `/admin/stats` | admin | jamlangan ko'rsatkichlar, oylik yozilishlar, kategoriyalar |
+| GET | `/admin/stats` | admin | jamlangan ko'rsatkichlar, so'nggi foydalanuvchilar va kurslar, oylik yozilishlar, kategoriyalar |
 | GET | `/admin/users?search=&role=&status=&page=` | admin | foydalanuvchilar |
 | PATCH | `/admin/users/:id/role` | admin | `{role: "TEACHER"\|"STUDENT"}` |
 | PATCH | `/admin/users/:id/status` | admin | `{isActive: false}` — bloklash |
@@ -192,14 +200,16 @@ Postman to'plami: [docs/EduLearn.postman_collection.json](docs/EduLearn.postman_
 npm test
 ```
 
-- **Backend (35 test)**, alohida `edulearn_test` bazasida ishlaydi:
+- **Backend (39 test)**, alohida `edulearn_test` bazasida ishlaydi:
   - ro'yxatdan o'tish va kirish, takroriy email, noto'g'ri ma'lumot;
   - public register orqali admin yoki o'qituvchi rolini olib bo'lmasligi;
   - talabaning admin va o'qituvchi endpointlariga 403 olishi;
   - o'qituvchining faqat o'z kursini o'zgartira olishi;
   - kurslar va kategoriyalar CRUD;
   - takroriy yozilish (409), progressning takrorlanmasligi va 0 dars holati;
-  - DRAFT kurs ko'rinishi, 400/401/403/404/409/422 javoblari.
+  - DRAFT kurs ko'rinishi, darssiz kursni nashr qilib bo'lmasligi, admin yashirgan kurs;
+  - o'qituvchi arizasi: takroriy ariza 409, qabul qilinsa rol TEACHER, qayta qaror 409;
+  - 400/401/403/404/409/422 javoblari.
 - **Frontend:** route guard (401 → login, 403 sahifa), kurs kartasi, progress, video havolasi xavfsizligi.
 
 ### 3 rol integratsiyasi testi
@@ -209,12 +219,12 @@ npm run dev          # 1-terminal: baza + API
 npm run test:e2e     # 2-terminal
 ```
 
-Bu test ishlab turgan API'da seed hisoblari bilan to'liq ssenariyni bajaradi (37 ta tekshiruv):
+Bu test ishlab turgan API'da seed hisoblari bilan to'liq ssenariyni bajaradi (36 ta tekshiruv):
 
 | Qadam | Kim | Nima tekshiriladi |
 |---|---|---|
 | 1 | O'qituvchi | Kurs va 2 ta dars yaratadi (`DRAFT`). Talaba bu kursni ko'rmaydi, boshqa o'qituvchi uni tahrirlay olmaydi (403) |
-| 2 | O'qituvchi → Admin | Kurs tekshiruvga yuboriladi (`PENDING`). O'qituvchi uni o'zi nashr qila olmaydi (422). Admin kursni ro'yxatda ko'radi va tasdiqlaydi (`PUBLISHED`) |
+| 2 | O'qituvchi → Admin | O'qituvchi `ARCHIVED` qo'ya olmaydi (422). Kursni o'zi nashr qiladi (`PUBLISHED`), admin uni barcha kurslar ro'yxatida ko'radi |
 | 3 | Mehmon, talaba | Kurs katalogda chiqadi, yopiq dars matni yashirin turadi. Talaba yoziladi (201), qayta yozilsa 409. Dars tugatilgach progress 50% bo'ladi |
 | 4 | O'qituvchi, admin | O'qituvchi talabani va uning progressini ko'radi, boshqa o'qituvchi ko'ra olmaydi (403). Admin statistikasi yangilanadi |
 | 5 | Hamma | Rol chegaralari: talaba → admin 403, o'qituvchi → admin 403, admin → yozilish 403, mehmon → 401 |
@@ -270,7 +280,7 @@ O'qituvchi talabi: loyihaning qaysi qismida AI ishlatilgani, unga nima so'ralgan
 
 | Sana | Kim | AI'dan nima so'raldi | Nima tekshirildi yoki o'zgartirildi |
 |---|---|---|---|
-| | | | |
+| 2026-11-24 | Claude (AI) | "EduLearn v2" promptidagi o'zgarishlar: o'qituvchi arizasi, qisqa tavsif, kursni o'qituvchi nashr qilishi, yangi dizayn | Darssiz kursni nashr qilish va oxirgi dars o'chganda kurs katalogda qolib ketishi topildi — 422 qoidasi va avtomatik qoralamaga qaytarish qo'shildi; 39 ta test bilan tekshirildi |
 
 Har bir yozuv bir qatordan iborat bo'lsin. AI kodida topilgan xatoni tuzatgan commit xabarida ham buni ko'rsating, masalan: `fix(auth): ... (AI ... qilgan edi)`.
 
